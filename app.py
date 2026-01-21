@@ -35,7 +35,6 @@ def require_internal_token(f):
         if not token or token != INTERNAL_API_TOKEN:
             return _cors(jsonify({"error": "Unauthorized"})), 401
         return f(*args, **kwargs)
-
     return decorated
 
 
@@ -53,17 +52,15 @@ def _safe_filename(s: str) -> str:
     s = (s or "").strip().lower()
     s = re.sub(r"\s+", "_", s)
     s = re.sub(r"[^a-z0-9_\-]+", "", s)
-    return (s[:60] or "invoice")
+    return (s[:60] or "file")
 
 
 def send_pdf(chat_id: str, pdf_bytes: bytes, filename: str, caption: str):
     files = {"document": (filename, pdf_bytes, "application/pdf")}
     data = {"chat_id": chat_id, "caption": caption}
     r = requests.post(f"{TG_API}/sendDocument", data=data, files=files, timeout=60)
-
     if not r.ok:
         raise RuntimeError(f"Telegram error {r.status_code}: {r.text}")
-
     return r.json()
 
 
@@ -84,38 +81,43 @@ def build_invoice_html(
     def esc(v):
         return html.escape("" if v is None else str(v))
 
-    # Rows
-    item_rows = []
+    # Для стабильного выравнивания чисел:
+    # рисуем числа как inline-block фиксированной ширины (в "ch" — ширина символа)
+    def num_cell(value: str, width_ch: int) -> str:
+        v = esc(value)
+        return f'<span class="numbox" style="width:{width_ch}ch">{v}</span>'
+
+    rows = []
     for idx, item in enumerate(items or [], start=1):
         name = esc(item.get("name", ""))
 
-        qty_raw = item.get("quantity", 0)
-        price_raw = item.get("price", 0)
-
         try:
-            qty = float(qty_raw)
+            qty = float(item.get("quantity", 0))
         except Exception:
             qty = 0.0
 
         try:
-            price = float(price_raw)
+            price = float(item.get("price", 0))
         except Exception:
             price = 0.0
 
         amount = price * qty
-        qty_str = f"{qty:g}"
 
-        item_rows.append(f"""
+        qty_str = f"{qty:g}"
+        price_str = f"{price:.2f}"
+        amount_str = f"{amount:.2f}"
+
+        rows.append(f"""
           <tr>
-            <td class="c-idx num">{idx}</td>
-            <td class="c-name">{name}</td>
-            <td class="c-qty num mono">{qty_str}</td>
-            <td class="c-price num mono">{price:.2f}</td>
-            <td class="c-sum num mono">{amount:.2f}</td>
+            <td class="td-idx">{num_cell(str(idx), 3)}</td>
+            <td class="td-name">{name}</td>
+            <td class="td-qty">{num_cell(qty_str, 6)}</td>
+            <td class="td-price">{num_cell(price_str, 10)}</td>
+            <td class="td-sum">{num_cell(amount_str, 10)}</td>
           </tr>
         """)
 
-    items_tbody = "\n".join(item_rows) if item_rows else """
+    tbody = "\n".join(rows) if rows else """
       <tr><td colspan="5" class="muted">Товары не указаны</td></tr>
     """
 
@@ -129,8 +131,6 @@ def build_invoice_html(
           body {{
             font-family: DejaVu Sans, Arial, sans-serif;
             color: #1a1a1a;
-            margin: 0;
-            padding: 0;
           }}
 
           .header {{
@@ -181,11 +181,11 @@ def build_invoice_html(
           }}
           .sender .value {{
             font-size: 13px;
-            font-weight: 800;
+            font-weight: 900;
             color: #1a1a1a;
           }}
           .sender .phone {{
-            font-weight: 700;
+            font-weight: 800;
             color: #2c3e50;
           }}
 
@@ -225,23 +225,19 @@ def build_invoice_html(
             letter-spacing: 0.5px;
           }}
 
-          /* Таблица: фиксируем ширины через colgroup (самый стабильный способ) */
           table.items {{
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
           }}
 
-          /* ширины колонок в мм для PDF */
           col.cw-idx {{ width: 12mm; }}
-          col.cw-qty {{ width: 22mm; }}
-          col.cw-price {{ width: 28mm; }}
-          col.cw-sum {{ width: 30mm; }}
-          /* name = остаток ширины */
+          col.cw-qty {{ width: 24mm; }}
+          col.cw-price {{ width: 32mm; }}
+          col.cw-sum {{ width: 34mm; }}
 
           table.items thead th {{
             background: #f0f0f0;
-            text-align: left;
             font-size: 11px;
             font-weight: 800;
             color: #333;
@@ -260,15 +256,16 @@ def build_invoice_html(
             background: #fafafa;
           }}
 
-          .num {{
+          /* Заголовки числовых колонок тоже вправо */
+          th.th-num {{ text-align: right; }}
+          td.td-idx, td.td-qty, td.td-price, td.td-sum {{ text-align: right; }}
+
+          /* Стабильные числа */
+          .numbox {{
+            display: inline-block;
             text-align: right;
             white-space: nowrap;
-          }}
-
-          /* Делает цифры одинаковой ширины, столбцы выглядят идеально ровно */
-          .mono {{
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-            font-variant-numeric: tabular-nums;
           }}
 
           .muted {{
@@ -300,7 +297,7 @@ def build_invoice_html(
             font-size: 16px;
             color: #2c3e50;
             white-space: nowrap;
-            font-variant-numeric: tabular-nums;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
           }}
 
           .footer {{
@@ -353,15 +350,15 @@ def build_invoice_html(
           </colgroup>
           <thead>
             <tr>
-              <th class="num">№</th>
+              <th>№</th>
               <th>Наименование</th>
-              <th class="num">Кол-во</th>
-              <th class="num">Цена</th>
-              <th class="num">Сумма</th>
+              <th class="th-num">Кол-во</th>
+              <th class="th-num">Цена</th>
+              <th class="th-num">Сумма</th>
             </tr>
           </thead>
           <tbody>
-            {items_tbody}
+            {tbody}
           </tbody>
         </table>
 
@@ -394,9 +391,11 @@ def send_invoice():
     date_only = now_dt.strftime("%d.%m.%Y")
 
     order_id = str(payload.get("order_id") or "UNKNOWN")
+
     customer_name = str(payload.get("customer_name") or "Не указано")
     customer_email = str(payload.get("customer_email") or "—")
     customer_phone = str(payload.get("customer_phone") or "—")
+
     items = payload.get("items") if isinstance(payload.get("items"), list) else []
     delivery_address = str(payload.get("delivery_address") or "Не указано")
 
@@ -422,8 +421,17 @@ def send_invoice():
 
     pdf_bytes = HTML(string=html_doc).write_pdf()
 
-    filename = f"{_safe_filename(order_id)}_{date_only.replace('.', '-')}.pdf"
-    caption = f"Накладная {order_id} • {salon_name}"
+    # filename: "дата_салон_ord-номер"
+    safe_salon = _safe_filename(salon_name)
+    safe_order = _safe_filename(order_id)
+    filename = f"{date_only}_{safe_salon}_{safe_order}.pdf"
+
+    caption = (
+        f"🧾Накладная заказа №{order_id}\n"
+        f"📅Дата: {date_only}\n"
+        f"👤Клиент: {salon_name}\n"
+        f"💸Общая сумма: {total_sum:.2f} ₽"
+    )
 
     try:
         tg_resp = send_pdf(ADMIN_CHAT_ID, pdf_bytes, filename=filename, caption=caption)
