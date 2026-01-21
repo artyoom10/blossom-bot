@@ -11,12 +11,10 @@ from weasyprint import HTML
 
 app = Flask(__name__)
 
-# Env
 BOT_TOKEN = os.environ.get("BLOSSOM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN")
 
-# "От кого" — секреты (в Render Env, не в репо)
 SENDER_NAME = os.environ.get("SENDER_NAME", "—")
 SENDER_PHONE = os.environ.get("SENDER_PHONE", "—")
 
@@ -63,7 +61,6 @@ def send_pdf(chat_id: str, pdf_bytes: bytes, filename: str, caption: str):
     data = {"chat_id": chat_id, "caption": caption}
     r = requests.post(f"{TG_API}/sendDocument", data=data, files=files, timeout=60)
 
-    # чтобы в ответе было понятно, если Telegram отвалился
     if not r.ok:
         raise RuntimeError(f"Telegram error {r.status_code}: {r.text}")
 
@@ -87,10 +84,11 @@ def build_invoice_html(
     def esc(v):
         return html.escape("" if v is None else str(v))
 
-    # Items
+    # Rows
     item_rows = []
     for idx, item in enumerate(items or [], start=1):
         name = esc(item.get("name", ""))
+
         qty_raw = item.get("quantity", 0)
         price_raw = item.get("price", 0)
 
@@ -105,17 +103,15 @@ def build_invoice_html(
             price = 0.0
 
         amount = price * qty
-
-        # qty печатаем без .00 если целое
         qty_str = f"{qty:g}"
 
         item_rows.append(f"""
           <tr>
-            <td class="col-idx">{idx}</td>
-            <td class="col-name">{name}</td>
-            <td class="col-qty num">{qty_str}</td>
-            <td class="col-price num">{price:.2f}</td>
-            <td class="col-amount num">{amount:.2f}</td>
+            <td class="c-idx num">{idx}</td>
+            <td class="c-name">{name}</td>
+            <td class="c-qty num mono">{qty_str}</td>
+            <td class="c-price num mono">{price:.2f}</td>
+            <td class="c-sum num mono">{amount:.2f}</td>
           </tr>
         """)
 
@@ -137,7 +133,6 @@ def build_invoice_html(
             padding: 0;
           }}
 
-          /* Header layout */
           .header {{
             border-bottom: 3px solid #2c3e50;
             padding-bottom: 12px;
@@ -169,7 +164,6 @@ def build_invoice_html(
             text-align: center;
           }}
 
-          /* Sender block */
           .sender {{
             margin: 12px 0 14px 0;
             border: 1px solid #d8e6f2;
@@ -195,7 +189,6 @@ def build_invoice_html(
             color: #2c3e50;
           }}
 
-          /* Meta blocks */
           .meta-info {{
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -232,13 +225,20 @@ def build_invoice_html(
             letter-spacing: 0.5px;
           }}
 
-          /* Table */
+          /* Таблица: фиксируем ширины через colgroup (самый стабильный способ) */
           table.items {{
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            margin-bottom: 10px;
           }}
+
+          /* ширины колонок в мм для PDF */
+          col.cw-idx {{ width: 12mm; }}
+          col.cw-qty {{ width: 22mm; }}
+          col.cw-price {{ width: 28mm; }}
+          col.cw-sum {{ width: 30mm; }}
+          /* name = остаток ширины */
+
           table.items thead th {{
             background: #f0f0f0;
             text-align: left;
@@ -248,26 +248,27 @@ def build_invoice_html(
             border-bottom: 2px solid #d0d0d0;
             padding: 10px 10px;
           }}
+
           table.items tbody td {{
             border-bottom: 1px solid #e8e8e8;
             padding: 9px 10px;
             font-size: 11px;
-            vertical-align: top;
+            vertical-align: middle;
           }}
+
           table.items tbody tr:nth-child(2n) td {{
             background: #fafafa;
           }}
 
-          /* Fixed widths to align numbers neatly */
-          .col-idx {{ width: 44px; text-align: right; }}
-          .col-name {{ width: auto; }}
-          .col-qty {{ width: 80px; }}
-          .col-price {{ width: 92px; }}
-          .col-amount {{ width: 98px; }}
-
           .num {{
             text-align: right;
             white-space: nowrap;
+          }}
+
+          /* Делает цифры одинаковой ширины, столбцы выглядят идеально ровно */
+          .mono {{
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            font-variant-numeric: tabular-nums;
           }}
 
           .muted {{
@@ -276,7 +277,6 @@ def build_invoice_html(
             text-align: center;
           }}
 
-          /* Totals */
           .totals {{
             margin-top: 10px;
             padding-top: 10px;
@@ -300,9 +300,9 @@ def build_invoice_html(
             font-size: 16px;
             color: #2c3e50;
             white-space: nowrap;
+            font-variant-numeric: tabular-nums;
           }}
 
-          /* Footer */
           .footer {{
             margin-top: 18px;
             padding-top: 10px;
@@ -344,13 +344,20 @@ def build_invoice_html(
 
         <div class="section-title">Товары</div>
         <table class="items">
+          <colgroup>
+            <col class="cw-idx">
+            <col>
+            <col class="cw-qty">
+            <col class="cw-price">
+            <col class="cw-sum">
+          </colgroup>
           <thead>
             <tr>
-              <th class="col-idx">№</th>
-              <th class="col-name">Наименование</th>
-              <th class="col-qty num">Кол-во</th>
-              <th class="col-price num">Цена</th>
-              <th class="col-amount num">Сумма</th>
+              <th class="num">№</th>
+              <th>Наименование</th>
+              <th class="num">Кол-во</th>
+              <th class="num">Цена</th>
+              <th class="num">Сумма</th>
             </tr>
           </thead>
           <tbody>
@@ -383,7 +390,7 @@ def send_invoice():
     salon_name = str(payload.get("salon_name") or "Салон")
 
     now_dt = datetime.now(ZoneInfo("Europe/Helsinki"))
-    dt_str = now_dt.strftime("%d.%m.%Y %H:%M")      # dd.mm.yyyy HH:MM [web:249]
+    dt_str = now_dt.strftime("%d.%m.%Y %H:%M")
     date_only = now_dt.strftime("%d.%m.%Y")
 
     order_id = str(payload.get("order_id") or "UNKNOWN")
