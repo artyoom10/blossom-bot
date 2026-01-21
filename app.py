@@ -59,7 +59,8 @@ def _safe_filename(s: str) -> str:
 
 def send_pdf(chat_id: str, pdf_bytes: bytes, filename: str, caption: str):
     files = {"document": (filename, pdf_bytes, "application/pdf")}
-    data = {"chat_id": chat_id, "caption": caption}
+    # parse_mode=HTML чтобы работали <b> и <code> в caption [web:1]
+    data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
     r = requests.post(f"{TG_API}/sendDocument", data=data, files=files, timeout=60)
     if not r.ok:
         raise RuntimeError(f"Telegram error {r.status_code}: {r.text}")
@@ -134,12 +135,9 @@ def build_invoice_html(
             color: #1a1a1a;
           }}
 
-          /* ===== HEADER ===== */
           .header {{
             position: relative;
             border-bottom: 3px solid #2c3e50;
-
-            /* ПОДНИМАЕМ ЛИНИЮ: уменьшаем нижний padding и высоту */
             padding: 3mm 0 2mm 0;
             margin-bottom: 12px;
             min-height: 18mm;
@@ -186,10 +184,9 @@ def build_invoice_html(
           }}
 
           .header-spacer {{
-            height: 14mm; /* меньше, чтобы не оставалось много белого */
+            height: 14mm;
           }}
 
-          /* ===== SENDER ===== */
           .sender {{
             margin: 10px 0 14px 0;
             border: 1px solid #d8e6f2;
@@ -215,7 +212,6 @@ def build_invoice_html(
             color: #2c3e50;
           }}
 
-          /* ===== META ===== */
           .meta-info {{
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -252,7 +248,6 @@ def build_invoice_html(
             letter-spacing: 0.5px;
           }}
 
-          /* ===== TABLE ===== */
           table.items {{
             width: 100%;
             border-collapse: collapse;
@@ -297,7 +292,6 @@ def build_invoice_html(
             text-align: center;
           }}
 
-          /* ===== TOTALS ===== */
           .totals {{
             margin-top: 10px;
             padding-top: 10px;
@@ -326,7 +320,6 @@ def build_invoice_html(
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
           }}
 
-          /* ===== FOOTER ===== */
           .footer {{
             margin-top: 18px;
             padding-top: 10px;
@@ -465,11 +458,12 @@ def send_invoice():
     safe_order = _safe_filename(order_id)
     filename = f"{header_date_str}_{safe_salon}_{safe_order}.pdf"
 
+    # Caption: лейблы жирные, значения моно
     caption = (
-        f"🧾Накладная заказа №{order_id}\n"
-        f"📅Дата: {header_date_str}\n"
-        f"👤Клиент: {salon_name}\n"
-        f"💸Общая сумма: {total_sum:.2f} ₽"
+        f"<b>🧾 Накладная заказа №</b><code>{html.escape(order_id)}</code>\n"
+        f"<b>📅 Дата:</b> <code>{html.escape(header_date_str)}</code>\n"
+        f"<b>👤 Клиент:</b> <code>{html.escape(salon_name)}</code>\n"
+        f"<b>💸 Общая сумма:</b> <code>{total_sum:.2f} ₽</code>"
     )
 
     try:
