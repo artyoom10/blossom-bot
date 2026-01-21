@@ -134,31 +134,43 @@ def build_invoice_html(
             color: #1a1a1a;
           }}
 
+          /* ===== HEADER (2 ROWS) ===== */
           .header {{
             border-bottom: 3px solid #2c3e50;
-            padding: 6mm 0 4mm 0; /* логотип "выше" и больше воздуха сверху */
+            padding-bottom: 10px;
             margin-bottom: 14px;
           }}
 
-          /* Надёжная раскладка без перекрытий: table */
-          .header-row {{
+          /* Верхняя полоска только под логотип */
+          .header-top {{
+            margin-bottom: 6px;
+            height: 22mm;      /* резервируем место под лого */
+          }}
+          .logo {{
+            height: 22mm;      /* лого "выше" и отдельно */
+            width: auto;
+            display: block;
+          }}
+
+          /* Нижняя полоска: заголовок по центру, дата справа */
+          .header-main {{
             display: table;
             width: 100%;
             table-layout: fixed;
           }}
-          .header-left, .header-center, .header-right {{
+          .h-left, .h-center, .h-right {{
             display: table-cell;
             vertical-align: top;
           }}
-          .header-left {{ width: 28mm; }}
-          .header-right {{ width: 28mm; text-align: right; font-size: 11px; color: #666; }}
-          .header-center {{ text-align: center; }}
-
-          .logo {{
-            width: 26mm;
-            height: auto;
-            display: block;
+          .h-left {{ width: 1mm; }}   /* пустышка для симметрии */
+          .h-right {{
+            width: 30mm;
+            text-align: right;
+            font-size: 11px;
+            color: #666;
+            white-space: nowrap;
           }}
+          .h-center {{ text-align: center; }}
 
           .title {{
             margin: 0;
@@ -167,13 +179,13 @@ def build_invoice_html(
             letter-spacing: -0.4px;
             color: #2c3e50;
           }}
-
           .order-id {{
             margin-top: 6px;
             font-size: 12px;
             color: #666;
           }}
 
+          /* ===== SENDER ===== */
           .sender {{
             margin: 12px 0 14px 0;
             border: 1px solid #d8e6f2;
@@ -199,6 +211,7 @@ def build_invoice_html(
             color: #2c3e50;
           }}
 
+          /* ===== META ===== */
           .meta-info {{
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -235,12 +248,12 @@ def build_invoice_html(
             letter-spacing: 0.5px;
           }}
 
+          /* ===== TABLE ===== */
           table.items {{
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
           }}
-
           col.cw-idx {{ width: 12mm; }}
           col.cw-qty {{ width: 24mm; }}
           col.cw-price {{ width: 32mm; }}
@@ -254,14 +267,12 @@ def build_invoice_html(
             border-bottom: 2px solid #d0d0d0;
             padding: 10px 10px;
           }}
-
           table.items tbody td {{
             border-bottom: 1px solid #e8e8e8;
             padding: 9px 10px;
             font-size: 11px;
             vertical-align: middle;
           }}
-
           table.items tbody tr:nth-child(2n) td {{
             background: #fafafa;
           }}
@@ -282,6 +293,7 @@ def build_invoice_html(
             text-align: center;
           }}
 
+          /* ===== TOTALS ===== */
           .totals {{
             margin-top: 10px;
             padding-top: 10px;
@@ -310,6 +322,7 @@ def build_invoice_html(
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
           }}
 
+          /* ===== FOOTER ===== */
           .footer {{
             margin-top: 18px;
             padding-top: 10px;
@@ -323,13 +336,17 @@ def build_invoice_html(
       <body>
 
         <div class="header">
-          <div class="header-row">
-            <div class="header-left">{logo_html}</div>
-            <div class="header-center">
+          <div class="header-top">
+            {logo_html}
+          </div>
+
+          <div class="header-main">
+            <div class="h-left"></div>
+            <div class="h-center">
               <div class="title">Накладная для {esc(salon_name)}</div>
               <div class="order-id">Заказ: {esc(order_id)}</div>
             </div>
-            <div class="header-right">{esc(date_only)}</div>
+            <div class="h-right">{esc(date_only)}</div>
           </div>
         </div>
 
@@ -437,7 +454,7 @@ def send_invoice():
         date_only=date_only,
     )
 
-    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()  # base_url для logo [web:314]
+    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()  # base_url нужен для logo [web:314]
 
     safe_salon = _safe_filename(salon_name)
     safe_order = _safe_filename(order_id)
