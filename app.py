@@ -16,7 +16,7 @@ BOT_TOKEN = os.environ.get("BLOSSOM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN")
 
-# "От кого" — секреты, не в репо
+# "От кого" — секреты (в Render Env, не в репо)
 SENDER_NAME = os.environ.get("SENDER_NAME", "—")
 SENDER_PHONE = os.environ.get("SENDER_PHONE", "—")
 
@@ -61,10 +61,9 @@ def _safe_filename(s: str) -> str:
 def send_pdf(chat_id: str, pdf_bytes: bytes, filename: str, caption: str):
     files = {"document": (filename, pdf_bytes, "application/pdf")}
     data = {"chat_id": chat_id, "caption": caption}
-
     r = requests.post(f"{TG_API}/sendDocument", data=data, files=files, timeout=60)
 
-    # чтобы видеть понятную ошибку Telegram вместо "500"
+    # чтобы в ответе было понятно, если Telegram отвалился
     if not r.ok:
         raise RuntimeError(f"Telegram error {r.status_code}: {r.text}")
 
@@ -82,7 +81,8 @@ def build_invoice_html(
     items: list,
     delivery_address: str,
     total_sum: float,
-    generated_date: str,
+    dt_str: str,        # dd.mm.yyyy HH:MM
+    date_only: str,     # dd.mm.yyyy
 ) -> str:
     def esc(v):
         return html.escape("" if v is None else str(v))
@@ -106,13 +106,16 @@ def build_invoice_html(
 
         amount = price * qty
 
+        # qty печатаем без .00 если целое
+        qty_str = f"{qty:g}"
+
         item_rows.append(f"""
           <tr>
-            <td class="num">{idx}</td>
-            <td>{name}</td>
-            <td class="num">{qty:g}</td>
-            <td class="num">{price:.2f}</td>
-            <td class="num">{amount:.2f}</td>
+            <td class="col-idx">{idx}</td>
+            <td class="col-name">{name}</td>
+            <td class="col-qty num">{qty_str}</td>
+            <td class="col-price num">{price:.2f}</td>
+            <td class="col-amount num">{amount:.2f}</td>
           </tr>
         """)
 
@@ -126,6 +129,7 @@ def build_invoice_html(
         <meta charset="utf-8">
         <style>
           @page {{ size: A4; margin: 16mm; }}
+
           body {{
             font-family: DejaVu Sans, Arial, sans-serif;
             color: #1a1a1a;
@@ -133,54 +137,80 @@ def build_invoice_html(
             padding: 0;
           }}
 
+          /* Header layout */
           .header {{
             border-bottom: 3px solid #2c3e50;
             padding-bottom: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+            position: relative;
           }}
-          .header h1 {{
+
+          .date-top-right {{
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 11px;
+            color: #666;
+          }}
+
+          .title {{
+            text-align: center;
             margin: 0;
             font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.4px;
             color: #2c3e50;
           }}
-          .subline {{
-            margin-top: 6px;
-            font-size: 11px;
-            color: #666;
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-          }}
-          .pill {{
-            display: inline-block;
-            padding: 3px 8px;
-            border: 1px solid #e0e0e0;
-            border-radius: 999px;
-            background: #fafafa;
-          }}
+
           .order-id {{
+            margin-top: 8px;
             font-size: 12px;
             color: #666;
-            margin-top: 6px;
+            text-align: center;
           }}
 
+          /* Sender block */
+          .sender {{
+            margin: 12px 0 14px 0;
+            border: 1px solid #d8e6f2;
+            background: #eef6ff;
+            border-radius: 10px;
+            padding: 10px 12px;
+          }}
+          .sender .label {{
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #2c3e50;
+            margin-bottom: 4px;
+          }}
+          .sender .value {{
+            font-size: 13px;
+            font-weight: 800;
+            color: #1a1a1a;
+          }}
+          .sender .phone {{
+            font-weight: 700;
+            color: #2c3e50;
+          }}
+
+          /* Meta blocks */
           .meta-info {{
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
+            gap: 14px;
+            margin-bottom: 14px;
             font-size: 11px;
           }}
           .meta-section {{
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 10px 12px;
             background: #f9f9f9;
           }}
           .meta-section .label {{
-            font-weight: 700;
+            font-weight: 800;
             color: #555;
             font-size: 10px;
             text-transform: uppercase;
@@ -194,95 +224,106 @@ def build_invoice_html(
           }}
 
           .section-title {{
-            font-weight: 800;
+            font-weight: 900;
             font-size: 12px;
             color: #2c3e50;
-            margin-bottom: 8px;
+            margin: 12px 0 8px 0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }}
 
+          /* Table */
           table.items {{
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 12px;
-          }}
-          table.items thead {{
-            background: #f0f0f0;
+            table-layout: fixed;
+            margin-bottom: 10px;
           }}
           table.items thead th {{
+            background: #f0f0f0;
             text-align: left;
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 800;
             color: #333;
             border-bottom: 2px solid #d0d0d0;
-            padding: 10px 8px;
+            padding: 10px 10px;
           }}
           table.items tbody td {{
             border-bottom: 1px solid #e8e8e8;
-            padding: 9px 8px;
+            padding: 9px 10px;
             font-size: 11px;
+            vertical-align: top;
           }}
           table.items tbody tr:nth-child(2n) td {{
             background: #fafafa;
           }}
 
+          /* Fixed widths to align numbers neatly */
+          .col-idx {{ width: 44px; text-align: right; }}
+          .col-name {{ width: auto; }}
+          .col-qty {{ width: 80px; }}
+          .col-price {{ width: 92px; }}
+          .col-amount {{ width: 98px; }}
+
           .num {{
             text-align: right;
-            width: 70px;
             white-space: nowrap;
           }}
 
           .muted {{
             color: #888;
             font-style: italic;
+            text-align: center;
           }}
 
+          /* Totals */
           .totals {{
-            text-align: right;
             margin-top: 10px;
             padding-top: 10px;
             border-top: 2px solid #d0d0d0;
           }}
           .total-row {{
-            display: flex;
-            justify-content: flex-end;
-            gap: 20px;
-            margin-bottom: 6px;
-            font-size: 13px;
+            display: grid;
+            grid-template-columns: 1fr 140px;
+            gap: 12px;
+            align-items: baseline;
           }}
           .total-label {{
-            font-weight: 600;
-            min-width: 140px;
+            text-align: right;
+            font-weight: 700;
+            font-size: 12px;
+            color: #333;
           }}
           .total-amount {{
             text-align: right;
-            min-width: 110px;
-            font-weight: 800;
+            font-weight: 900;
             font-size: 16px;
             color: #2c3e50;
+            white-space: nowrap;
           }}
 
+          /* Footer */
           .footer {{
             margin-top: 18px;
             padding-top: 10px;
             border-top: 1px solid #ddd;
             font-size: 10px;
             color: #666;
-          }}
-          .footer-text {{
-            margin: 4px 0;
+            line-height: 1.35;
           }}
         </style>
       </head>
       <body>
+
         <div class="header">
-          <h1>Накладная для {esc(salon_name)}</h1>
-          <div class="subline">
-            <span class="pill">От кого: {esc(sender_name)} ({esc(sender_phone)})</span>
-            <span class="pill">Дата: {esc(generated_date)}</span>
-          </div>
+          <div class="date-top-right">{esc(date_only)}</div>
+          <h1 class="title">Накладная для {esc(salon_name)}</h1>
           <div class="order-id">Заказ: {esc(order_id)}</div>
+        </div>
+
+        <div class="sender">
+          <div class="label">От кого</div>
+          <div class="value">{esc(sender_name)} <span class="phone">({esc(sender_phone)})</span></div>
         </div>
 
         <div class="meta-info">
@@ -301,15 +342,15 @@ def build_invoice_html(
           </div>
         </div>
 
-        <div class="section-title">Позиции</div>
+        <div class="section-title">Товары</div>
         <table class="items">
           <thead>
             <tr>
-              <th class="num">№</th>
-              <th>Наименование</th>
-              <th class="num">Кол-во</th>
-              <th class="num">Цена</th>
-              <th class="num">Сумма</th>
+              <th class="col-idx">№</th>
+              <th class="col-name">Наименование</th>
+              <th class="col-qty num">Кол-во</th>
+              <th class="col-price num">Цена</th>
+              <th class="col-amount num">Сумма</th>
             </tr>
           </thead>
           <tbody>
@@ -325,8 +366,10 @@ def build_invoice_html(
         </div>
 
         <div class="footer">
-          <div class="footer-text">BlossomffBot • Автоматически сформировано системой</div>
+          <div>Дата: {esc(dt_str)}</div>
+          <div>@BlossomffBot • Автоматически сформировано системой</div>
         </div>
+
       </body>
     </html>
     """
@@ -337,10 +380,11 @@ def build_invoice_html(
 def send_invoice():
     payload = request.get_json(silent=True) or {}
 
-    # dynamic из запроса
     salon_name = str(payload.get("salon_name") or "Салон")
 
-    generated_date = datetime.now(ZoneInfo("Europe/Helsinki")).strftime("%Y-%m-%d %H:%M")
+    now_dt = datetime.now(ZoneInfo("Europe/Helsinki"))
+    dt_str = now_dt.strftime("%d.%m.%Y %H:%M")      # dd.mm.yyyy HH:MM [web:249]
+    date_only = now_dt.strftime("%d.%m.%Y")
 
     order_id = str(payload.get("order_id") or "UNKNOWN")
     customer_name = str(payload.get("customer_name") or "Не указано")
@@ -365,12 +409,13 @@ def send_invoice():
         items=items,
         delivery_address=delivery_address,
         total_sum=total_sum,
-        generated_date=generated_date,
+        dt_str=dt_str,
+        date_only=date_only,
     )
 
     pdf_bytes = HTML(string=html_doc).write_pdf()
 
-    filename = f"{_safe_filename(order_id)}_{generated_date.split()[0]}.pdf"
+    filename = f"{_safe_filename(order_id)}_{date_only.replace('.', '-')}.pdf"
     caption = f"Накладная {order_id} • {salon_name}"
 
     try:
