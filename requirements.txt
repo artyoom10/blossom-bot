@@ -1,5 +1,6 @@
 Flask==3.0.0
 Werkzeug==3.0.1
 requests==2.31.0
-weasyprint==67.0
+WeasyPrint==62.3
+pydyf==0.10.0
 gunicorn==21.2.0
