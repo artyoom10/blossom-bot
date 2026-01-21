@@ -78,8 +78,8 @@ def build_invoice_html(
     items: list,
     delivery_address: str,
     total_sum: float,
-    generation_dt_str: str,   # дата генерации (Москва) dd.mm.yyyy HH:MM
-    header_date_str: str,     # входная дата (то, что справа сверху)
+    generation_dt_str: str,
+    header_date_str: str,
 ) -> str:
     def esc(v):
         return html.escape("" if v is None else str(v))
@@ -127,7 +127,6 @@ def build_invoice_html(
       <head>
         <meta charset="utf-8">
         <style>
-          /* меньше пустого сверху */
           @page {{ size: A4; margin: 12mm 16mm 16mm 16mm; }}
 
           body {{
@@ -139,12 +138,13 @@ def build_invoice_html(
           .header {{
             position: relative;
             border-bottom: 3px solid #2c3e50;
-            padding: 4mm 0 4mm 0;
-            margin-bottom: 14px;
-            min-height: 22mm;
+
+            /* ПОДНИМАЕМ ЛИНИЮ: уменьшаем нижний padding и высоту */
+            padding: 3mm 0 2mm 0;
+            margin-bottom: 12px;
+            min-height: 18mm;
           }}
 
-          /* Логотип отдельно, выше */
           .logo {{
             position: absolute;
             left: 0;
@@ -153,7 +153,6 @@ def build_invoice_html(
             height: auto;
           }}
 
-          /* Дата справа (входная) */
           .header-date {{
             position: absolute;
             right: 0;
@@ -163,14 +162,13 @@ def build_invoice_html(
             white-space: nowrap;
           }}
 
-          /* Центрируем по странице точно: left 50% + translateX(-50%) */
           .header-center {{
             position: absolute;
             left: 50%;
             top: 0;
             transform: translateX(-50%);
             text-align: center;
-            width: 120mm; /* ограничение, чтобы не наезжало на дату */
+            width: 120mm;
           }}
 
           .title {{
@@ -182,19 +180,18 @@ def build_invoice_html(
           }}
 
           .order-id {{
-            margin-top: 6px;
+            margin-top: 5px;
             font-size: 12px;
             color: #666;
           }}
 
-          /* Подложка слева под логотип, чтобы центр не наехал визуально */
           .header-spacer {{
-            height: 18mm; /* резерв под верхнюю часть (логотип/центр/дата) */
+            height: 14mm; /* меньше, чтобы не оставалось много белого */
           }}
 
           /* ===== SENDER ===== */
           .sender {{
-            margin: 12px 0 14px 0;
+            margin: 10px 0 14px 0;
             border: 1px solid #d8e6f2;
             background: #eef6ff;
             border-radius: 10px;
@@ -347,7 +344,7 @@ def build_invoice_html(
           <div class="header-date">{esc(header_date_str)}</div>
           <div class="header-center">
             <div class="title">Накладная для {esc(salon_name)}</div>
-            <div class="order-id">Заказ: {esc(order_id)}</div>
+            <div class="order-id">Заказ №{esc(order_id)}</div>
           </div>
           <div class="header-spacer"></div>
         </div>
@@ -420,11 +417,9 @@ def send_invoice():
 
     salon_name = str(payload.get("salon_name") or "Салон")
 
-    # дата генерации: Москва
     now_dt = datetime.now(ZoneInfo("Europe/Moscow"))
     generation_dt_str = now_dt.strftime("%d.%m.%Y %H:%M")
 
-    # дата в шапке: входная (если нет — берём сегодняшнюю по Москве)
     header_date_str = (
         payload.get("invoice_date")
         or payload.get("date")
