@@ -11,6 +11,10 @@ from weasyprint import HTML
 
 app = Flask(__name__)
 
+# Paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Env
 BOT_TOKEN = os.environ.get("BLOSSOM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN")
@@ -68,6 +72,7 @@ def build_invoice_html(
     salon_name: str,
     sender_name: str,
     sender_phone: str,
+    logo_path: str,     # relative path like "blossom_logo.png"
     order_id: str,
     customer_name: str,
     customer_email: str,
@@ -75,14 +80,12 @@ def build_invoice_html(
     items: list,
     delivery_address: str,
     total_sum: float,
-    dt_str: str,        # dd.mm.yyyy HH:MM
-    date_only: str,     # dd.mm.yyyy
+    dt_str: str,
+    date_only: str,
 ) -> str:
     def esc(v):
         return html.escape("" if v is None else str(v))
 
-    # Для стабильного выравнивания чисел:
-    # рисуем числа как inline-block фиксированной ширины (в "ch" — ширина символа)
     def num_cell(value: str, width_ch: int) -> str:
         v = esc(value)
         return f'<span class="numbox" style="width:{width_ch}ch">{v}</span>'
@@ -103,23 +106,24 @@ def build_invoice_html(
 
         amount = price * qty
 
-        qty_str = f"{qty:g}"
-        price_str = f"{price:.2f}"
-        amount_str = f"{amount:.2f}"
-
         rows.append(f"""
           <tr>
             <td class="td-idx">{num_cell(str(idx), 3)}</td>
             <td class="td-name">{name}</td>
-            <td class="td-qty">{num_cell(qty_str, 6)}</td>
-            <td class="td-price">{num_cell(price_str, 10)}</td>
-            <td class="td-sum">{num_cell(amount_str, 10)}</td>
+            <td class="td-qty">{num_cell(f"{qty:g}", 6)}</td>
+            <td class="td-price">{num_cell(f"{price:.2f}", 10)}</td>
+            <td class="td-sum">{num_cell(f"{amount:.2f}", 10)}</td>
           </tr>
         """)
 
     tbody = "\n".join(rows) if rows else """
       <tr><td colspan="5" class="muted">Товары не указаны</td></tr>
     """
+
+    logo_html = ""
+    if logo_path:
+        # путь относительный к base_url (BASE_DIR)
+        logo_html = f'<img class="logo" src="{esc(logo_path)}" alt="logo">'
 
     return f"""
     <html>
@@ -138,6 +142,15 @@ def build_invoice_html(
             padding-bottom: 12px;
             margin-bottom: 14px;
             position: relative;
+            min-height: 20mm;
+          }}
+
+          .logo {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 26mm;
+            height: auto;
           }}
 
           .date-top-right {{
@@ -151,6 +164,7 @@ def build_invoice_html(
           .title {{
             text-align: center;
             margin: 0;
+            padding: 0 30mm;
             font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.4px;
@@ -159,9 +173,9 @@ def build_invoice_html(
 
           .order-id {{
             margin-top: 8px;
+            text-align: center;
             font-size: 12px;
             color: #666;
-            text-align: center;
           }}
 
           .sender {{
@@ -256,11 +270,9 @@ def build_invoice_html(
             background: #fafafa;
           }}
 
-          /* Заголовки числовых колонок тоже вправо */
           th.th-num {{ text-align: right; }}
           td.td-idx, td.td-qty, td.td-price, td.td-sum {{ text-align: right; }}
 
-          /* Стабильные числа */
           .numbox {{
             display: inline-block;
             text-align: right;
@@ -313,6 +325,7 @@ def build_invoice_html(
       <body>
 
         <div class="header">
+          {logo_html}
           <div class="date-top-right">{esc(date_only)}</div>
           <h1 class="title">Накладная для {esc(salon_name)}</h1>
           <div class="order-id">Заказ: {esc(order_id)}</div>
@@ -404,10 +417,14 @@ def send_invoice():
     except Exception:
         total_sum = 0.0
 
+    # логотип в корне репо
+    logo_path = "blossom_logo.png" if os.path.exists(os.path.join(BASE_DIR, "blossom_logo.png")) else ""
+
     html_doc = build_invoice_html(
         salon_name=salon_name,
         sender_name=SENDER_NAME,
         sender_phone=SENDER_PHONE,
+        logo_path=logo_path,
         order_id=order_id,
         customer_name=customer_name,
         customer_email=customer_email,
@@ -419,9 +436,9 @@ def send_invoice():
         date_only=date_only,
     )
 
-    pdf_bytes = HTML(string=html_doc).write_pdf()
+    # ВАЖНО: base_url нужен, чтобы WeasyPrint нашёл blossom_logo.png по относительному пути [web:302][web:314]
+    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()
 
-    # filename: "дата_салон_ord-номер"
     safe_salon = _safe_filename(salon_name)
     safe_order = _safe_filename(order_id)
     filename = f"{date_only}_{safe_salon}_{safe_order}.pdf"
