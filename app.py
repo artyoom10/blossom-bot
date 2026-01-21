@@ -11,10 +11,8 @@ from weasyprint import HTML
 
 app = Flask(__name__)
 
-# Paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Env
 BOT_TOKEN = os.environ.get("BLOSSOM_BOT_TOKEN")
 ADMIN_CHAT_ID = os.environ.get("ADMIN_CHAT_ID")
 INTERNAL_API_TOKEN = os.environ.get("INTERNAL_API_TOKEN")
@@ -72,7 +70,7 @@ def build_invoice_html(
     salon_name: str,
     sender_name: str,
     sender_phone: str,
-    logo_path: str,     # relative path like "blossom_logo.png"
+    logo_path: str,
     order_id: str,
     customer_name: str,
     customer_email: str,
@@ -122,7 +120,6 @@ def build_invoice_html(
 
     logo_html = ""
     if logo_path:
-        # путь относительный к base_url (BASE_DIR)
         logo_html = f'<img class="logo" src="{esc(logo_path)}" alt="logo">'
 
     return f"""
@@ -139,32 +136,32 @@ def build_invoice_html(
 
           .header {{
             border-bottom: 3px solid #2c3e50;
-            padding-bottom: 12px;
+            padding: 6mm 0 4mm 0; /* логотип "выше" и больше воздуха сверху */
             margin-bottom: 14px;
-            position: relative;
-            min-height: 20mm;
           }}
+
+          /* Надёжная раскладка без перекрытий: table */
+          .header-row {{
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+          }}
+          .header-left, .header-center, .header-right {{
+            display: table-cell;
+            vertical-align: top;
+          }}
+          .header-left {{ width: 28mm; }}
+          .header-right {{ width: 28mm; text-align: right; font-size: 11px; color: #666; }}
+          .header-center {{ text-align: center; }}
 
           .logo {{
-            position: absolute;
-            top: 0;
-            left: 0;
             width: 26mm;
             height: auto;
-          }}
-
-          .date-top-right {{
-            position: absolute;
-            top: 0;
-            right: 0;
-            font-size: 11px;
-            color: #666;
+            display: block;
           }}
 
           .title {{
-            text-align: center;
             margin: 0;
-            padding: 0 30mm;
             font-size: 22px;
             font-weight: 800;
             letter-spacing: -0.4px;
@@ -172,8 +169,7 @@ def build_invoice_html(
           }}
 
           .order-id {{
-            margin-top: 8px;
-            text-align: center;
+            margin-top: 6px;
             font-size: 12px;
             color: #666;
           }}
@@ -292,18 +288,20 @@ def build_invoice_html(
             border-top: 2px solid #d0d0d0;
           }}
           .total-row {{
-            display: grid;
-            grid-template-columns: 1fr 140px;
-            gap: 12px;
-            align-items: baseline;
+            display: table;
+            width: 100%;
           }}
           .total-label {{
+            display: table-cell;
             text-align: right;
             font-weight: 700;
             font-size: 12px;
             color: #333;
+            padding-right: 10px;
           }}
           .total-amount {{
+            display: table-cell;
+            width: 50mm;
             text-align: right;
             font-weight: 900;
             font-size: 16px;
@@ -325,10 +323,14 @@ def build_invoice_html(
       <body>
 
         <div class="header">
-          {logo_html}
-          <div class="date-top-right">{esc(date_only)}</div>
-          <h1 class="title">Накладная для {esc(salon_name)}</h1>
-          <div class="order-id">Заказ: {esc(order_id)}</div>
+          <div class="header-row">
+            <div class="header-left">{logo_html}</div>
+            <div class="header-center">
+              <div class="title">Накладная для {esc(salon_name)}</div>
+              <div class="order-id">Заказ: {esc(order_id)}</div>
+            </div>
+            <div class="header-right">{esc(date_only)}</div>
+          </div>
         </div>
 
         <div class="sender">
@@ -417,7 +419,6 @@ def send_invoice():
     except Exception:
         total_sum = 0.0
 
-    # логотип в корне репо
     logo_path = "blossom_logo.png" if os.path.exists(os.path.join(BASE_DIR, "blossom_logo.png")) else ""
 
     html_doc = build_invoice_html(
@@ -436,8 +437,7 @@ def send_invoice():
         date_only=date_only,
     )
 
-    # ВАЖНО: base_url нужен, чтобы WeasyPrint нашёл blossom_logo.png по относительному пути [web:302][web:314]
-    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()
+    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()  # base_url для logo [web:314]
 
     safe_salon = _safe_filename(salon_name)
     safe_order = _safe_filename(order_id)
