@@ -78,8 +78,8 @@ def build_invoice_html(
     items: list,
     delivery_address: str,
     total_sum: float,
-    dt_str: str,
-    date_only: str,
+    generation_dt_str: str,   # дата генерации (Москва) dd.mm.yyyy HH:MM
+    header_date_str: str,     # входная дата (то, что справа сверху)
 ) -> str:
     def esc(v):
         return html.escape("" if v is None else str(v))
@@ -127,7 +127,7 @@ def build_invoice_html(
       <head>
         <meta charset="utf-8">
         <style>
-          /* Чуть меньше верхнее поле, чтобы не было много белого */
+          /* меньше пустого сверху */
           @page {{ size: A4; margin: 12mm 16mm 16mm 16mm; }}
 
           body {{
@@ -141,41 +141,36 @@ def build_invoice_html(
             border-bottom: 3px solid #2c3e50;
             padding: 4mm 0 4mm 0;
             margin-bottom: 14px;
-            min-height: 20mm; /* чтобы логотип не вылез за низ шапки */
+            min-height: 22mm;
           }}
 
-          /* Логотип "отдельно": absolute, не влияет на центрирование текста */
+          /* Логотип отдельно, выше */
           .logo {{
             position: absolute;
             left: 0;
-            top: -6mm;        /* поднимаем выше шапки */
+            top: -6mm;
             width: 24mm;
             height: auto;
           }}
 
-          /* Контент шапки: зарезервировать место слева под логотип */
-          .header-content {{
-            padding-left: 30mm; /* ширина логотипа + зазор */
-          }}
-
-          .header-row {{
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-          }}
-          .hc-center, .hc-right {{
-            display: table-cell;
-            vertical-align: top;
-          }}
-          .hc-center {{
-            text-align: center;
-          }}
-          .hc-right {{
-            width: 30mm;
-            text-align: right;
+          /* Дата справа (входная) */
+          .header-date {{
+            position: absolute;
+            right: 0;
+            top: 0;
             font-size: 11px;
             color: #666;
             white-space: nowrap;
+          }}
+
+          /* Центрируем по странице точно: left 50% + translateX(-50%) */
+          .header-center {{
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 120mm; /* ограничение, чтобы не наезжало на дату */
           }}
 
           .title {{
@@ -190,6 +185,11 @@ def build_invoice_html(
             margin-top: 6px;
             font-size: 12px;
             color: #666;
+          }}
+
+          /* Подложка слева под логотип, чтобы центр не наехал визуально */
+          .header-spacer {{
+            height: 18mm; /* резерв под верхнюю часть (логотип/центр/дата) */
           }}
 
           /* ===== SENDER ===== */
@@ -261,7 +261,6 @@ def build_invoice_html(
             border-collapse: collapse;
             table-layout: fixed;
           }}
-
           col.cw-idx {{ width: 12mm; }}
           col.cw-qty {{ width: 24mm; }}
           col.cw-price {{ width: 32mm; }}
@@ -275,14 +274,12 @@ def build_invoice_html(
             border-bottom: 2px solid #d0d0d0;
             padding: 10px 10px;
           }}
-
           table.items tbody td {{
             border-bottom: 1px solid #e8e8e8;
             padding: 9px 10px;
             font-size: 11px;
             vertical-align: middle;
           }}
-
           table.items tbody tr:nth-child(2n) td {{
             background: #fafafa;
           }}
@@ -347,15 +344,12 @@ def build_invoice_html(
 
         <div class="header">
           {logo_html}
-          <div class="header-content">
-            <div class="header-row">
-              <div class="hc-center">
-                <div class="title">Накладная для {esc(salon_name)}</div>
-                <div class="order-id">Заказ: {esc(order_id)}</div>
-              </div>
-              <div class="hc-right">{esc(date_only)}</div>
-            </div>
+          <div class="header-date">{esc(header_date_str)}</div>
+          <div class="header-center">
+            <div class="title">Накладная для {esc(salon_name)}</div>
+            <div class="order-id">Заказ: {esc(order_id)}</div>
           </div>
+          <div class="header-spacer"></div>
         </div>
 
         <div class="sender">
@@ -410,7 +404,7 @@ def build_invoice_html(
         </div>
 
         <div class="footer">
-          <div>Дата: {esc(dt_str)}</div>
+          <div>Дата генерации (МСК): {esc(generation_dt_str)}</div>
           <div>@BlossomffBot • Автоматически сформировано системой</div>
         </div>
 
@@ -426,9 +420,17 @@ def send_invoice():
 
     salon_name = str(payload.get("salon_name") or "Салон")
 
-    now_dt = datetime.now(ZoneInfo("Europe/Helsinki"))
-    dt_str = now_dt.strftime("%d.%m.%Y %H:%M")
-    date_only = now_dt.strftime("%d.%m.%Y")
+    # дата генерации: Москва
+    now_dt = datetime.now(ZoneInfo("Europe/Moscow"))
+    generation_dt_str = now_dt.strftime("%d.%m.%Y %H:%M")
+
+    # дата в шапке: входная (если нет — берём сегодняшнюю по Москве)
+    header_date_str = (
+        payload.get("invoice_date")
+        or payload.get("date")
+        or now_dt.strftime("%d.%m.%Y")
+    )
+    header_date_str = str(header_date_str)
 
     order_id = str(payload.get("order_id") or "UNKNOWN")
 
@@ -458,20 +460,19 @@ def send_invoice():
         items=items,
         delivery_address=delivery_address,
         total_sum=total_sum,
-        dt_str=dt_str,
-        date_only=date_only,
+        generation_dt_str=generation_dt_str,
+        header_date_str=header_date_str,
     )
 
-    # base_url обязателен, чтобы WeasyPrint нашёл blossom_logo.png по относительному пути [web:314]
     pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()
 
     safe_salon = _safe_filename(salon_name)
     safe_order = _safe_filename(order_id)
-    filename = f"{date_only}_{safe_salon}_{safe_order}.pdf"
+    filename = f"{header_date_str}_{safe_salon}_{safe_order}.pdf"
 
     caption = (
         f"🧾Накладная заказа №{order_id}\n"
-        f"📅Дата: {date_only}\n"
+        f"📅Дата: {header_date_str}\n"
         f"👤Клиент: {salon_name}\n"
         f"💸Общая сумма: {total_sum:.2f} ₽"
     )
