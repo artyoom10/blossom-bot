@@ -127,50 +127,56 @@ def build_invoice_html(
       <head>
         <meta charset="utf-8">
         <style>
-          @page {{ size: A4; margin: 16mm; }}
+          /* Чуть меньше верхнее поле, чтобы не было много белого */
+          @page {{ size: A4; margin: 12mm 16mm 16mm 16mm; }}
 
           body {{
             font-family: DejaVu Sans, Arial, sans-serif;
             color: #1a1a1a;
           }}
 
-          /* ===== HEADER (2 ROWS) ===== */
+          /* ===== HEADER ===== */
           .header {{
+            position: relative;
             border-bottom: 3px solid #2c3e50;
-            padding-bottom: 10px;
+            padding: 4mm 0 4mm 0;
             margin-bottom: 14px;
+            min-height: 20mm; /* чтобы логотип не вылез за низ шапки */
           }}
 
-          /* Верхняя полоска только под логотип */
-          .header-top {{
-            margin-bottom: 6px;
-            height: 22mm;      /* резервируем место под лого */
-          }}
+          /* Логотип "отдельно": absolute, не влияет на центрирование текста */
           .logo {{
-            height: 22mm;      /* лого "выше" и отдельно */
-            width: auto;
-            display: block;
+            position: absolute;
+            left: 0;
+            top: -6mm;        /* поднимаем выше шапки */
+            width: 24mm;
+            height: auto;
           }}
 
-          /* Нижняя полоска: заголовок по центру, дата справа */
-          .header-main {{
+          /* Контент шапки: зарезервировать место слева под логотип */
+          .header-content {{
+            padding-left: 30mm; /* ширина логотипа + зазор */
+          }}
+
+          .header-row {{
             display: table;
             width: 100%;
             table-layout: fixed;
           }}
-          .h-left, .h-center, .h-right {{
+          .hc-center, .hc-right {{
             display: table-cell;
             vertical-align: top;
           }}
-          .h-left {{ width: 1mm; }}   /* пустышка для симметрии */
-          .h-right {{
+          .hc-center {{
+            text-align: center;
+          }}
+          .hc-right {{
             width: 30mm;
             text-align: right;
             font-size: 11px;
             color: #666;
             white-space: nowrap;
           }}
-          .h-center {{ text-align: center; }}
 
           .title {{
             margin: 0;
@@ -179,6 +185,7 @@ def build_invoice_html(
             letter-spacing: -0.4px;
             color: #2c3e50;
           }}
+
           .order-id {{
             margin-top: 6px;
             font-size: 12px;
@@ -254,6 +261,7 @@ def build_invoice_html(
             border-collapse: collapse;
             table-layout: fixed;
           }}
+
           col.cw-idx {{ width: 12mm; }}
           col.cw-qty {{ width: 24mm; }}
           col.cw-price {{ width: 32mm; }}
@@ -267,12 +275,14 @@ def build_invoice_html(
             border-bottom: 2px solid #d0d0d0;
             padding: 10px 10px;
           }}
+
           table.items tbody td {{
             border-bottom: 1px solid #e8e8e8;
             padding: 9px 10px;
             font-size: 11px;
             vertical-align: middle;
           }}
+
           table.items tbody tr:nth-child(2n) td {{
             background: #fafafa;
           }}
@@ -336,17 +346,15 @@ def build_invoice_html(
       <body>
 
         <div class="header">
-          <div class="header-top">
-            {logo_html}
-          </div>
-
-          <div class="header-main">
-            <div class="h-left"></div>
-            <div class="h-center">
-              <div class="title">Накладная для {esc(salon_name)}</div>
-              <div class="order-id">Заказ: {esc(order_id)}</div>
+          {logo_html}
+          <div class="header-content">
+            <div class="header-row">
+              <div class="hc-center">
+                <div class="title">Накладная для {esc(salon_name)}</div>
+                <div class="order-id">Заказ: {esc(order_id)}</div>
+              </div>
+              <div class="hc-right">{esc(date_only)}</div>
             </div>
-            <div class="h-right">{esc(date_only)}</div>
           </div>
         </div>
 
@@ -454,7 +462,8 @@ def send_invoice():
         date_only=date_only,
     )
 
-    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()  # base_url нужен для logo [web:314]
+    # base_url обязателен, чтобы WeasyPrint нашёл blossom_logo.png по относительному пути [web:314]
+    pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()
 
     safe_salon = _safe_filename(salon_name)
     safe_order = _safe_filename(order_id)
