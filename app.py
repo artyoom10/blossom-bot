@@ -91,11 +91,6 @@ def build_invoice_html(
         return f'<span class="numbox" style="width:{width_ch}ch">{v}</span>'
 
     def format_ru_date(s: str) -> str:
-        """
-        Пытаемся распарсить дату из 'dd.mm.yyyy' или 'yyyy-mm-dd' и вывести:
-        '6 февраля 2026 г.'
-        Если не вышло — возвращаем как есть.
-        """
         s = (s or "").strip()
         if not s:
             return "—"
@@ -170,7 +165,6 @@ def build_invoice_html(
       <head>
         <meta charset="utf-8">
         <style>
-          /* A5 */
           @page {{ size: 148mm 210mm; margin: 10mm 10mm 12mm 10mm; }}
 
           body {{
@@ -178,55 +172,51 @@ def build_invoice_html(
             color: #1a1a1a;
           }}
 
-          /* --- HEADER: компактно, без absolute, без пустых spacer --- */
+          /* --- HEADER --- */
           .header {{
             border-bottom: 2px solid #2c3e50;
-            padding: 0 0 2mm 0;     /* меньше воздуха снизу */
-            margin: 0 0 6px 0;      /* убрать «пустое белое место» */
+            padding: 0 0 2mm 0;
+            margin: 0 0 6px 0;
           }}
 
-          table.header-table {{
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
+          .header-grid {{
+            display: grid;
+            grid-template-columns: 1fr auto 1fr; /* центр всегда по центру страницы */
+            align-items: start;
+            column-gap: 6mm;
           }}
 
           .h-left {{
-            width: 18mm;
-            vertical-align: top;
-            padding: 0;
+            justify-self: start;
           }}
 
           .h-center {{
-            vertical-align: top;
+            justify-self: center;
             text-align: center;
-            padding: 0;
           }}
 
           .h-right {{
-            width: 34mm;
-            vertical-align: top;
+            justify-self: end;
             text-align: right;
-            padding: 0;
           }}
 
           .logo {{
-            width: 16mm;        /* уменьшили логотип */
+            width: 18mm;          /* логотип больше */
             height: auto;
             display: block;
-            margin-top: -1.5mm; /* подняли выше */
+            margin-top: -2.5mm;   /* логотип выше */
           }}
 
           .header-date {{
             font-size: 10px;
             color: #666;
             white-space: nowrap;
-            padding-top: 0.5mm; /* чуть вниз от верхнего края */
+            margin-top: -1.5mm;   /* дата выше */
           }}
 
           .title {{
             margin: 0;
-            font-size: 18px;    /* заголовок больше (и точно крупнее контента) */
+            font-size: 19px;      /* заголовок больше */
             font-weight: 900;
             letter-spacing: -0.2px;
             color: #2c3e50;
@@ -235,9 +225,10 @@ def build_invoice_html(
 
           .subtitle {{
             margin-top: 2px;
-            font-size: 12px;
+            font-size: 13px;      /* салон больше */
             color: #666;
             line-height: 1.15;
+            font-weight: 600;
           }}
 
           /* --- SENDER --- */
@@ -389,18 +380,18 @@ def build_invoice_html(
       <body>
 
         <div class="header">
-          <table class="header-table">
-            <tr>
-              <td class="h-left">{logo_html}</td>
-              <td class="h-center">
-                <div class="title">Накладная заказа №{esc(order_id)}</div>
-                <div class="subtitle">{esc(salon_name)}</div>
-              </td>
-              <td class="h-right">
-                <div class="header-date">{esc(header_date_ru)}</div>
-              </td>
-            </tr>
-          </table>
+          <div class="header-grid">
+            <div class="h-left">{logo_html}</div>
+
+            <div class="h-center">
+              <div class="title">Накладная заказа №{esc(order_id)}</div>
+              <div class="subtitle">{esc(salon_name)}</div>
+            </div>
+
+            <div class="h-right">
+              <div class="header-date">{esc(header_date_ru)}</div>
+            </div>
+          </div>
         </div>
 
         <div class="sender">
