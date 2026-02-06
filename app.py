@@ -109,11 +109,11 @@ def build_invoice_html(
         rows.append(
             f"""
           <tr>
-            <td class="td-idx">{num_cell(str(idx), 3)}</td>
+            <td class="td-idx">{num_cell(str(idx), 2)}</td>
             <td class="td-name">{name}</td>
-            <td class="td-qty">{num_cell(f"{qty:g}", 6)}</td>
-            <td class="td-price">{num_cell(f"{price:.2f}", 10)}</td>
-            <td class="td-sum">{num_cell(f"{amount:.2f}", 10)}</td>
+            <td class="td-qty">{num_cell(f"{qty:g}", 5)}</td>
+            <td class="td-price">{num_cell(f"{price:.2f}", 8)}</td>
+            <td class="td-sum">{num_cell(f"{amount:.2f}", 8)}</td>
           </tr>
         """
         )
@@ -124,6 +124,7 @@ def build_invoice_html(
 
     logo_html = ""
     if logo_path:
+        # без absolute — просто картинка в ячейке слева
         logo_html = f'<img class="logo" src="{esc(logo_path)}" alt="logo">'
 
     return f"""
@@ -131,6 +132,7 @@ def build_invoice_html(
       <head>
         <meta charset="utf-8">
         <style>
+          /* A5 */
           @page {{ size: 148mm 210mm; margin: 10mm 10mm 12mm 10mm; }}
 
           body {{
@@ -138,67 +140,60 @@ def build_invoice_html(
             color: #1a1a1a;
           }}
 
+          /* --- HEADER (без absolute, чтобы не было наложений) --- */
           .header {{
-            position: relative;
-            border-bottom: 3px solid #2c3e50;
-            padding: 3mm 0 2mm 0;
-            margin-bottom: 12px;
-            min-height: 18mm;
+            border-bottom: 2px solid #2c3e50;
+            padding: 2mm 0 3mm 0;
+            margin-bottom: 10px;
           }}
 
+          table.header-table {{
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }}
+          .h-left {{ width: 18mm; vertical-align: top; }}
+          .h-center {{ vertical-align: top; text-align: center; }}
+          .h-right {{ width: 28mm; vertical-align: top; text-align: right; }}
+
           .logo {{
-            position: absolute;
-            left: 0;
-            top: -6mm;
-            width: 24mm;
+            width: 16mm;   /* уменьшили логотип */
             height: auto;
+            display: block;
           }}
 
           .header-date {{
-            position: absolute;
-            right: 0;
-            top: 0;
-            font-size: 11px;
+            font-size: 9px;
             color: #666;
             white-space: nowrap;
-          }}
-
-          .header-center {{
-            position: absolute;
-            left: 50%;
-            top: 0;
-            transform: translateX(-50%);
-            text-align: center;
-            width: 120mm;
+            padding-top: 1mm;
           }}
 
           .title {{
             margin: 0;
-            font-size: 22px;
+            font-size: 16px;
             font-weight: 800;
-            letter-spacing: -0.4px;
+            letter-spacing: -0.2px;
             color: #2c3e50;
+            line-height: 1.1;
           }}
 
-          .order-id {{
-            margin-top: 5px;
-            font-size: 12px;
+          .subtitle {{
+            margin-top: 2px;
+            font-size: 11px;
             color: #666;
           }}
 
-          .header-spacer {{
-            height: 14mm;
-          }}
-
+          /* --- SENDER --- */
           .sender {{
-            margin: 10px 0 14px 0;
+            margin: 8px 0 10px 0;
             border: 1px solid #d8e6f2;
             background: #eef6ff;
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 8px 10px;
           }}
           .sender .label {{
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.6px;
@@ -206,7 +201,7 @@ def build_invoice_html(
             margin-bottom: 4px;
           }}
           .sender .value {{
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 900;
             color: #1a1a1a;
           }}
@@ -215,64 +210,66 @@ def build_invoice_html(
             color: #2c3e50;
           }}
 
+          /* --- META --- */
           .meta-info {{
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            margin-bottom: 14px;
-            font-size: 11px;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 10.5px;
           }}
           .meta-section {{
             border: 1px solid #e0e0e0;
             border-radius: 10px;
-            padding: 10px 12px;
+            padding: 8px 10px;
             background: #f9f9f9;
           }}
           .meta-section .label {{
             font-weight: 800;
             color: #555;
-            font-size: 10px;
+            font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 4px;
           }}
           .meta-section .value {{
             color: #1a1a1a;
-            line-height: 1.4;
+            line-height: 1.35;
             word-break: break-word;
           }}
 
           .section-title {{
             font-weight: 900;
-            font-size: 12px;
+            font-size: 11px;
             color: #2c3e50;
-            margin: 12px 0 8px 0;
+            margin: 10px 0 6px 0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }}
 
+          /* --- ITEMS TABLE (под A5 ужимаем фикс-колонки) --- */
           table.items {{
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
           }}
-          col.cw-idx {{ width: 12mm; }}
-          col.cw-qty {{ width: 24mm; }}
-          col.cw-price {{ width: 32mm; }}
-          col.cw-sum {{ width: 34mm; }}
+          col.cw-idx {{ width: 9mm; }}
+          col.cw-qty {{ width: 18mm; }}
+          col.cw-price {{ width: 24mm; }}
+          col.cw-sum {{ width: 25mm; }}
 
           table.items thead th {{
             background: #f0f0f0;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             color: #333;
             border-bottom: 2px solid #d0d0d0;
-            padding: 10px 10px;
+            padding: 7px 8px;
           }}
           table.items tbody td {{
             border-bottom: 1px solid #e8e8e8;
-            padding: 9px 10px;
-            font-size: 11px;
+            padding: 7px 8px;
+            font-size: 10px;
             vertical-align: middle;
           }}
           table.items tbody tr:nth-child(2n) td {{
@@ -296,8 +293,8 @@ def build_invoice_html(
           }}
 
           .totals {{
-            margin-top: 10px;
-            padding-top: 10px;
+            margin-top: 8px;
+            padding-top: 8px;
             border-top: 2px solid #d0d0d0;
           }}
           .total-row {{
@@ -308,26 +305,26 @@ def build_invoice_html(
             display: table-cell;
             text-align: right;
             font-weight: 700;
-            font-size: 12px;
+            font-size: 11px;
             color: #333;
             padding-right: 10px;
           }}
           .total-amount {{
             display: table-cell;
-            width: 50mm;
+            width: 42mm;
             text-align: right;
             font-weight: 900;
-            font-size: 16px;
+            font-size: 14px;
             color: #2c3e50;
             white-space: nowrap;
             font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
           }}
 
           .footer {{
-            margin-top: 18px;
-            padding-top: 10px;
+            margin-top: 12px;
+            padding-top: 8px;
             border-top: 1px solid #ddd;
-            font-size: 10px;
+            font-size: 9px;
             color: #666;
             line-height: 1.35;
           }}
@@ -336,13 +333,20 @@ def build_invoice_html(
       <body>
 
         <div class="header">
-          {logo_html}
-          <div class="header-date">{esc(header_date_str)}</div>
-          <div class="header-center">
-            <div class="title">Накладная для {esc(salon_name)}</div>
-            <div class="order-id">Заказ №{esc(order_id)}</div>
-          </div>
-          <div class="header-spacer"></div>
+          <table class="header-table">
+            <tr>
+              <td class="h-left">{logo_html}</td>
+              <td class="h-center">
+                <!-- было: "Накладная для ..." -->
+                <div class="title">Накладная заказа №{esc(order_id)}</div>
+                <!-- было: "Заказ №..." -->
+                <div class="subtitle">{esc(salon_name)}</div>
+              </td>
+              <td class="h-right">
+                <div class="header-date">{esc(header_date_str)}</div>
+              </td>
+            </tr>
+          </table>
         </div>
 
         <div class="sender">
