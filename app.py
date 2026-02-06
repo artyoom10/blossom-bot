@@ -1,5 +1,6 @@
 import os
 import re
+import io
 import html
 import requests
 from datetime import datetime
@@ -8,6 +9,7 @@ from functools import wraps
 
 from flask import Flask, request, jsonify, make_response
 from weasyprint import HTML
+
 
 app = Flask(__name__)
 
@@ -27,6 +29,8 @@ def _cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Internal-Token"
     resp.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS, GET"
+    # полезно, если фронт/веб захочет прочитать имя файла
+    resp.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
     return resp
 
 
@@ -37,17 +41,13 @@ def require_internal_token(f):
         if not token or token != INTERNAL_API_TOKEN:
             return _cors(jsonify({"error": "Unauthorized"})), 401
         return f(*args, **kwargs)
+
     return decorated
 
 
 @app.get("/")
 def health():
     return _cors(jsonify({"ok": True}))
-
-
-@app.route("/admin/invoice/send", methods=["OPTIONS"])
-def invoice_send_options():
-    return _cors(make_response("", 204))
 
 
 def _safe_filename(s: str) -> str:
@@ -58,8 +58,9 @@ def _safe_filename(s: str) -> str:
 
 
 def send_pdf(chat_id: str, pdf_bytes: bytes, filename: str, caption: str):
+    if not BOT_TOKEN:
+        raise RuntimeError("BLOSSOM_BOT_TOKEN is not set")
     files = {"document": (filename, pdf_bytes, "application/pdf")}
-    # parse_mode=HTML чтобы работали <b> и <code> в caption [web:1]
     data = {"chat_id": chat_id, "caption": caption, "parse_mode": "HTML"}
     r = requests.post(f"{TG_API}/sendDocument", data=data, files=files, timeout=60)
     if not r.ok:
@@ -105,7 +106,8 @@ def build_invoice_html(
 
         amount = price * qty
 
-        rows.append(f"""
+        rows.append(
+            f"""
           <tr>
             <td class="td-idx">{num_cell(str(idx), 3)}</td>
             <td class="td-name">{name}</td>
@@ -113,7 +115,8 @@ def build_invoice_html(
             <td class="td-price">{num_cell(f"{price:.2f}", 10)}</td>
             <td class="td-sum">{num_cell(f"{amount:.2f}", 10)}</td>
           </tr>
-        """)
+        """
+        )
 
     tbody = "\n".join(rows) if rows else """
       <tr><td colspan="5" class="muted">Товары не указаны</td></tr>
@@ -403,11 +406,7 @@ def build_invoice_html(
     """
 
 
-@app.post("/admin/invoice/send")
-@require_internal_token
-def send_invoice():
-    payload = request.get_json(silent=True) or {}
-
+def _extract_invoice_fields(payload: dict):
     salon_name = str(payload.get("salon_name") or "Салон")
 
     now_dt = datetime.now(ZoneInfo("Europe/Moscow"))
@@ -436,37 +435,100 @@ def send_invoice():
 
     logo_path = "blossom_logo.png" if os.path.exists(os.path.join(BASE_DIR, "blossom_logo.png")) else ""
 
+    return {
+        "salon_name": salon_name,
+        "generation_dt_str": generation_dt_str,
+        "header_date_str": header_date_str,
+        "order_id": order_id,
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+        "customer_phone": customer_phone,
+        "items": items,
+        "delivery_address": delivery_address,
+        "total_sum": total_sum,
+        "logo_path": logo_path,
+    }
+
+
+def _build_invoice_pdf(payload: dict):
+    f = _extract_invoice_fields(payload)
+
     html_doc = build_invoice_html(
-        salon_name=salon_name,
+        salon_name=f["salon_name"],
         sender_name=SENDER_NAME,
         sender_phone=SENDER_PHONE,
-        logo_path=logo_path,
-        order_id=order_id,
-        customer_name=customer_name,
-        customer_email=customer_email,
-        customer_phone=customer_phone,
-        items=items,
-        delivery_address=delivery_address,
-        total_sum=total_sum,
-        generation_dt_str=generation_dt_str,
-        header_date_str=header_date_str,
+        logo_path=f["logo_path"],
+        order_id=f["order_id"],
+        customer_name=f["customer_name"],
+        customer_email=f["customer_email"],
+        customer_phone=f["customer_phone"],
+        items=f["items"],
+        delivery_address=f["delivery_address"],
+        total_sum=f["total_sum"],
+        generation_dt_str=f["generation_dt_str"],
+        header_date_str=f["header_date_str"],
     )
 
     pdf_bytes = HTML(string=html_doc, base_url=BASE_DIR).write_pdf()
 
-    safe_salon = _safe_filename(salon_name)
-    safe_order = _safe_filename(order_id)
-    filename = f"{header_date_str}_{safe_salon}_{safe_order}.pdf"
+    safe_salon = _safe_filename(f["salon_name"])
+    safe_order = _safe_filename(f["order_id"])
+    filename = f'{f["header_date_str"]}_{safe_salon}_{safe_order}.pdf'
 
-    # Caption: лейблы жирные, значения моно
     caption = (
-        f"<b>🧾 Накладная заказа №</b><code>{html.escape(order_id)}</code>\n"
-        f"<b>📅 Дата:</b> <code>{html.escape(header_date_str)}</code>\n"
-        f"<b>👤 Клиент:</b> <code>{html.escape(salon_name)}</code>\n"
-        f"<b>💸 Общая сумма:</b> <code>{total_sum:.2f} ₽</code>"
+        f"<b>🧾 Накладная заказа №</b><code>{html.escape(f['order_id'])}</code>\n"
+        f"<b>📅 Дата:</b> <code>{html.escape(f['header_date_str'])}</code>\n"
+        f"<b>👤 Клиент:</b> <code>{html.escape(f['salon_name'])}</code>\n"
+        f"<b>💸 Общая сумма:</b> <code>{f['total_sum']:.2f} ₽</code>"
     )
 
+    return pdf_bytes, filename, caption, f["order_id"]
+
+
+# ----------- OPTIONS (CORS preflight) -----------
+
+@app.route("/admin/invoice/pdf", methods=["OPTIONS"])
+def invoice_pdf_options():
+    return _cors(make_response("", 204))
+
+
+@app.route("/admin/invoice/send", methods=["OPTIONS"])
+def invoice_send_options():
+    return _cors(make_response("", 204))
+
+
+# ----------- PDF generation (preview) -----------
+
+@app.post("/admin/invoice/pdf")
+@require_internal_token
+def invoice_pdf():
+    payload = request.get_json(silent=True) or {}
+
     try:
+        pdf_bytes, filename, _caption, order_id = _build_invoice_pdf(payload)
+
+        resp = make_response(pdf_bytes)
+        resp.headers["Content-Type"] = "application/pdf"
+        resp.headers["Content-Disposition"] = f'inline; filename="{filename}"'
+        resp.headers["Content-Length"] = str(len(pdf_bytes))
+        resp.headers["X-Order-Id"] = order_id  # опционально, удобно для логов
+        return _cors(resp)
+    except Exception as e:
+        return _cors(jsonify({"ok": False, "error": str(e)})), 500
+
+
+# ----------- Send to Telegram -----------
+
+@app.post("/admin/invoice/send")
+@require_internal_token
+def send_invoice():
+    payload = request.get_json(silent=True) or {}
+
+    if not ADMIN_CHAT_ID:
+        return _cors(jsonify({"ok": False, "error": "ADMIN_CHAT_ID is not set"})), 500
+
+    try:
+        pdf_bytes, filename, caption, order_id = _build_invoice_pdf(payload)
         tg_resp = send_pdf(ADMIN_CHAT_ID, pdf_bytes, filename=filename, caption=caption)
         return _cors(jsonify({"ok": True, "order_id": order_id, "telegram": tg_resp}))
     except Exception as e:
