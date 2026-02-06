@@ -90,6 +90,45 @@ def build_invoice_html(
         v = esc(value)
         return f'<span class="numbox" style="width:{width_ch}ch">{v}</span>'
 
+    def format_ru_date(s: str) -> str:
+        """
+        Пытаемся распарсить дату из 'dd.mm.yyyy' или 'yyyy-mm-dd' и вывести:
+        '6 февраля 2026 г.'
+        Если не вышло — возвращаем как есть.
+        """
+        s = (s or "").strip()
+        if not s:
+            return "—"
+
+        dt = None
+        for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d.%m.%y"):
+            try:
+                dt = datetime.strptime(s, fmt).date()
+                break
+            except Exception:
+                pass
+
+        if dt is None:
+            return s
+
+        months = {
+            1: "января",
+            2: "февраля",
+            3: "марта",
+            4: "апреля",
+            5: "мая",
+            6: "июня",
+            7: "июля",
+            8: "августа",
+            9: "сентября",
+            10: "октября",
+            11: "ноября",
+            12: "декабря",
+        }
+        return f"{dt.day} {months.get(dt.month, '')} {dt.year} г."
+
+    header_date_ru = format_ru_date(header_date_str)
+
     rows = []
     for idx, item in enumerate(items or [], start=1):
         name = esc(item.get("name", ""))
@@ -124,7 +163,6 @@ def build_invoice_html(
 
     logo_html = ""
     if logo_path:
-        # без absolute — просто картинка в ячейке слева
         logo_html = f'<img class="logo" src="{esc(logo_path)}" alt="logo">'
 
     return f"""
@@ -140,11 +178,11 @@ def build_invoice_html(
             color: #1a1a1a;
           }}
 
-          /* --- HEADER (без absolute, чтобы не было наложений) --- */
+          /* --- HEADER: компактно, без absolute, без пустых spacer --- */
           .header {{
             border-bottom: 2px solid #2c3e50;
-            padding: 2mm 0 3mm 0;
-            margin-bottom: 10px;
+            padding: 0 0 2mm 0;     /* меньше воздуха снизу */
+            margin: 0 0 6px 0;      /* убрать «пустое белое место» */
           }}
 
           table.header-table {{
@@ -152,27 +190,44 @@ def build_invoice_html(
             border-collapse: collapse;
             table-layout: fixed;
           }}
-          .h-left {{ width: 18mm; vertical-align: top; }}
-          .h-center {{ vertical-align: top; text-align: center; }}
-          .h-right {{ width: 28mm; vertical-align: top; text-align: right; }}
+
+          .h-left {{
+            width: 18mm;
+            vertical-align: top;
+            padding: 0;
+          }}
+
+          .h-center {{
+            vertical-align: top;
+            text-align: center;
+            padding: 0;
+          }}
+
+          .h-right {{
+            width: 34mm;
+            vertical-align: top;
+            text-align: right;
+            padding: 0;
+          }}
 
           .logo {{
-            width: 16mm;   /* уменьшили логотип */
+            width: 16mm;        /* уменьшили логотип */
             height: auto;
             display: block;
+            margin-top: -1.5mm; /* подняли выше */
           }}
 
           .header-date {{
-            font-size: 9px;
+            font-size: 10px;
             color: #666;
             white-space: nowrap;
-            padding-top: 1mm;
+            padding-top: 0.5mm; /* чуть вниз от верхнего края */
           }}
 
           .title {{
             margin: 0;
-            font-size: 16px;
-            font-weight: 800;
+            font-size: 18px;    /* заголовок больше (и точно крупнее контента) */
+            font-weight: 900;
             letter-spacing: -0.2px;
             color: #2c3e50;
             line-height: 1.1;
@@ -180,8 +235,9 @@ def build_invoice_html(
 
           .subtitle {{
             margin-top: 2px;
-            font-size: 11px;
+            font-size: 12px;
             color: #666;
+            line-height: 1.15;
           }}
 
           /* --- SENDER --- */
@@ -247,7 +303,7 @@ def build_invoice_html(
             letter-spacing: 0.5px;
           }}
 
-          /* --- ITEMS TABLE (под A5 ужимаем фикс-колонки) --- */
+          /* --- ITEMS TABLE --- */
           table.items {{
             width: 100%;
             border-collapse: collapse;
@@ -337,13 +393,11 @@ def build_invoice_html(
             <tr>
               <td class="h-left">{logo_html}</td>
               <td class="h-center">
-                <!-- было: "Накладная для ..." -->
                 <div class="title">Накладная заказа №{esc(order_id)}</div>
-                <!-- было: "Заказ №..." -->
                 <div class="subtitle">{esc(salon_name)}</div>
               </td>
               <td class="h-right">
-                <div class="header-date">{esc(header_date_str)}</div>
+                <div class="header-date">{esc(header_date_ru)}</div>
               </td>
             </tr>
           </table>
