@@ -131,7 +131,7 @@ def build_invoice_html(
       <head>
         <meta charset="utf-8">
         <style>
-          @page {{ size: A5; portrait: 10mm 12mm 12mm 12mm; }}
+          @page {{ size: A5 portrait: 10mm 12mm 12mm 12mm; }}
 
           body {{
             font-family: DejaVu Sans, Arial, sans-serif;
