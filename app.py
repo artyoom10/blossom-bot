@@ -1,0 +1,968 @@
+import hashlib
+import hmac
+import html
+import json
+import os
+import re
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set, Tuple
+from urllib.parse import parse_qsl
+
+import requests
+from flask import Flask, jsonify, request, send_from_directory
+
+app = Flask(__name__)
+
+BOT_TOKEN = os.getenv("BLOSSOM_BOT_TOKEN", "")
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "")
+MINIAPP_BASE_URL = os.getenv("MINIAPP_BASE_URL", "").rstrip("/")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY", "")
+FLOWERS_PUBLIC_BASE = os.getenv(
+    "FLOWERS_PUBLIC_BASE",
+    f"{SUPABASE_URL}/storage/v1/object/public/flowers" if SUPABASE_URL else "",
+).rstrip("/")
+REQUESTS_TABLE = os.getenv("REQUESTS_TABLE", "client_requests")
+
+FLOWER_TYPES_SELECT_FULL = "id,name,color,stem_length_cm,catalog_visible,price_rub,stock_display_override"
+FLOWER_TYPES_SELECT_BASIC = "id,name,color,stem_length_cm"
+REQUESTS_SELECT_FULL = (
+    "id,status,salon_name,total_amount,total_stems,items,created_at,updated_at,manager_note,previous_items"
+)
+REQUESTS_SELECT_BASIC = "id,status,salon_name,total_amount,total_stems,items,created_at,updated_at"
+
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+}
+
+app.config["JSON_AS_ASCII"] = False
+
+
+def admin_telegram_ids() -> Set[str]:
+    raw = os.getenv("ADMIN_TELEGRAM_IDS", "")
+    return {x.strip() for x in raw.split(",") if x.strip()}
+
+
+# -------------------- helpers --------------------
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def ensure_env() -> Optional[str]:
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        return "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set"
+    return None
+
+
+def supabase_request(method: str, path: str, *, params: Optional[Dict[str, Any]] = None, json_data: Any = None,
+                     prefer_return: bool = False) -> requests.Response:
+    headers = dict(HEADERS)
+    if prefer_return:
+        headers["Prefer"] = "return=representation"
+    return requests.request(
+        method=method,
+        url=f"{SUPABASE_URL}/rest/v1/{path}",
+        headers=headers,
+        params=params,
+        json=json_data,
+        timeout=30,
+    )
+
+
+def supabase_get(path: str, params: Optional[Dict[str, Any]] = None) -> requests.Response:
+    return supabase_request("GET", path, params=params)
+
+
+def supabase_post(path: str, json_data: Any, prefer_return: bool = True) -> requests.Response:
+    return supabase_request("POST", path, json_data=json_data, prefer_return=prefer_return)
+
+
+def supabase_patch(path: str, json_data: Any, params: Optional[Dict[str, Any]] = None,
+                   prefer_return: bool = True) -> requests.Response:
+    return supabase_request("PATCH", path, params=params, json_data=json_data, prefer_return=prefer_return)
+
+
+def tg_api(method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not BOT_TOKEN:
+        raise RuntimeError("BLOSSOM_BOT_TOKEN is not set")
+    r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/{method}", json=payload, timeout=30)
+    data = r.json()
+    if not r.ok or not data.get("ok"):
+        raise RuntimeError(f"Telegram API error: {data}")
+    return data
+
+
+def tg_send_message(chat_id: int | str, text: str, buttons: Optional[List[List[Dict[str, Any]]]] = None) -> Dict[str, Any]:
+    payload: Dict[str, Any] = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": True,
+    }
+    if buttons:
+        payload["reply_markup"] = {"inline_keyboard": buttons}
+    return tg_api("sendMessage", payload)
+
+
+def tg_answer_callback(callback_query_id: str, text: str) -> None:
+    try:
+        tg_api(
+            "answerCallbackQuery",
+            {
+                "callback_query_id": callback_query_id,
+                "text": text,
+                "show_alert": False,
+            },
+        )
+    except Exception:
+        pass
+
+
+def tg_clear_buttons(chat_id: int | str, message_id: int) -> None:
+    try:
+        tg_api(
+            "editMessageReplyMarkup",
+            {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "reply_markup": {"inline_keyboard": []},
+            },
+        )
+    except Exception:
+        pass
+
+
+def validate_webapp_init_data(init_data: str) -> Optional[Dict[str, Any]]:
+    if not init_data or not BOT_TOKEN:
+        return None
+    try:
+        parsed = dict(parse_qsl(init_data, keep_blank_values=True))
+        hash_received = parsed.pop("hash", None)
+        if not hash_received:
+            return None
+        data_check_string = "\n".join(f"{k}={v}" for k, v in sorted(parsed.items()))
+        secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+        calculated = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(calculated, hash_received):
+            return None
+        user_raw = parsed.get("user")
+        if not user_raw:
+            return None
+        return json.loads(user_raw)
+    except Exception:
+        return None
+
+
+def require_admin_from_header() -> Tuple[Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
+    init_data = request.headers.get("X-Telegram-Init-Data", "") or ""
+    user = validate_webapp_init_data(init_data)
+    if not user:
+        return None, (jsonify({"ok": False, "error": "invalid_init_data"}), 401)
+    uid = str(user.get("id") or "")
+    if uid not in admin_telegram_ids():
+        return None, (jsonify({"ok": False, "error": "forbidden"}), 403)
+    return user, None
+
+
+def parse_rub_price(value: Any) -> float:
+    if value is None:
+        return 0.0
+    text = str(value).strip().replace(",", ".")
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not match:
+        return 0.0
+    try:
+        return round(float(match.group(0)), 2)
+    except Exception:
+        return 0.0
+
+
+def flower_image(flower_type_id: Any) -> str:
+    if not FLOWERS_PUBLIC_BASE:
+        return ""
+    return f"{FLOWERS_PUBLIC_BASE}/flower_{flower_type_id}.png"
+
+
+def build_telegram_link(user_id: Any, username: Optional[str], full_name: str) -> str:
+    safe_name = html.escape(full_name or "Клиент")
+    if username:
+        safe_username = html.escape(username.lstrip("@"))
+        return f'<a href="https://t.me/{safe_username}">{safe_name}</a>'
+    return f'<a href="tg://user?id={html.escape(str(user_id))}">{safe_name}</a>'
+
+
+def load_salon_by_tg(telegram_id: int | str) -> Optional[Dict[str, Any]]:
+    r = supabase_get(
+        "salons",
+        {
+            "select": "id,name,tg_chat,address,phone,created_at",
+            "tg_chat": f"eq.{telegram_id}",
+            "limit": 1,
+        },
+    )
+    if not r.ok:
+        raise RuntimeError(r.text)
+    rows = r.json() or []
+    return rows[0] if rows else None
+
+
+def load_flower_types() -> List[Dict[str, Any]]:
+    r = supabase_get("flower_types", {"select": FLOWER_TYPES_SELECT_FULL, "order": "id.asc"})
+    if r.ok:
+        return r.json() or []
+    r2 = supabase_get("flower_types", {"select": FLOWER_TYPES_SELECT_BASIC, "order": "id.asc"})
+    if not r2.ok:
+        raise RuntimeError(r2.text)
+    return r2.json() or []
+
+
+def flower_catalog_visible(flower: Dict[str, Any]) -> bool:
+    if "catalog_visible" in flower and flower.get("catalog_visible") is False:
+        return False
+    return True
+
+
+def flower_effective_price(flower: Dict[str, Any]) -> float:
+    if flower.get("price_rub") is not None:
+        try:
+            return round(float(flower["price_rub"]), 2)
+        except (TypeError, ValueError):
+            pass
+    return parse_rub_price(flower.get("color"))
+
+
+def flower_effective_stock(flower: Dict[str, Any], stock_map: Dict[int, int]) -> int:
+    if flower.get("stock_display_override") is not None:
+        try:
+            return max(0, int(flower["stock_display_override"]))
+        except (TypeError, ValueError):
+            pass
+    return int(stock_map.get(flower["id"], 0))
+
+
+def load_request_by_id(request_id: int | str) -> Optional[Dict[str, Any]]:
+    r = supabase_get(
+        REQUESTS_TABLE,
+        {"select": "*", "id": f"eq.{request_id}", "limit": 1},
+    )
+    if not r.ok:
+        raise RuntimeError(r.text)
+    rows = r.json() or []
+    return rows[0] if rows else None
+
+
+def request_status_label(status: str) -> str:
+    return {
+        "new": "Новая",
+        "approved": "Подтверждена",
+        "rejected": "Отклонена",
+        "change_requested": "Нужно изменить",
+        "cancelled_by_client": "Отменена клиентом",
+    }.get(status, status)
+
+
+def build_items_summary(items: List[Dict[str, Any]]) -> str:
+    lines = []
+    for item in items:
+        name = html.escape(str(item.get("name") or "Позиция"))
+        qty = item.get("qty") or item.get("quantity") or 0
+        price = parse_rub_price(item.get("price"))
+        if price > 0:
+            lines.append(f"• {name} — {qty} шт × {price:.0f} ₽")
+        else:
+            lines.append(f"• {name} — {qty} шт")
+    return "\n".join(lines)
+
+
+def build_items_summary_plain(items: List[Dict[str, Any]]) -> str:
+    lines = []
+    for item in items:
+        name = str(item.get("name") or "Позиция")
+        qty = item.get("qty") or item.get("quantity") or 0
+        price = parse_rub_price(item.get("price"))
+        if price > 0:
+            lines.append(f"• {name} — {qty} шт × {price:.0f} ₽")
+        else:
+            lines.append(f"• {name} — {qty} шт")
+    return "\n".join(lines)
+
+
+def build_client_order_details_message(request_row: Dict[str, Any], title: str) -> str:
+    rid = request_row.get("id")
+    items = request_row.get("items") or []
+    total = float(request_row.get("total_amount") or 0)
+    stems = int(request_row.get("total_stems") or 0)
+    body = build_items_summary_plain(items)
+    return (
+        f"{title}\n\n"
+        f"Заявка <b>#{html.escape(str(rid))}</b>\n"
+        f"{html.escape(body)}\n\n"
+        f"Стеблей: <b>{stems}</b>\n"
+        f"Итого: <b>{total:.0f} ₽</b>"
+    )
+
+
+def build_revision_diff_message(request_row: Dict[str, Any]) -> str:
+    rid = request_row.get("id")
+    prev = request_row.get("previous_items") or []
+    cur = request_row.get("items") or []
+    note = str(request_row.get("manager_note") or "").strip()
+    lines = [
+        "✏️ <b>Менеджер внёс изменения в заявку</b>",
+        "",
+        f"Заявка <b>#{html.escape(str(rid))}</b>",
+        "",
+        "<b>Было:</b>",
+        html.escape(build_items_summary_plain(prev) or "—"),
+        "",
+        "<b>Стало:</b>",
+        html.escape(build_items_summary_plain(cur)),
+        "",
+        f"Новый итог: <b>{float(request_row.get('total_amount') or 0):.0f} ₽</b>, "
+        f"стеблей: <b>{int(request_row.get('total_stems') or 0)}</b>",
+    ]
+    if note:
+        lines.extend(["", "<b>Комментарий менеджера:</b>", html.escape(note)])
+    return "\n".join(lines)
+
+
+def notify_client(request_row: Dict[str, Any], action: str) -> None:
+    telegram_user_id = request_row.get("telegram_user_id")
+    if not telegram_user_id:
+        return
+    if action == "approved":
+        text = build_client_order_details_message(
+            request_row,
+            "✅ Заявка подтверждена.",
+        )
+        tg_send_message(telegram_user_id, text)
+        return
+    if action == "change_requested" and request_row.get("previous_items"):
+        text = build_revision_diff_message(request_row)
+        tg_send_message(telegram_user_id, text)
+        return
+    texts = {
+        "rejected": "❌ Ваша заявка отменена менеджером.",
+        "change_requested": "✏️ Менеджер предложил изменить заявку. Откройте приложение, чтобы увидеть детали.",
+        "cancelled_by_client": "Заявка отменена.",
+    }
+    text = texts.get(action)
+    if text:
+        tg_send_message(telegram_user_id, text)
+
+
+def salon_stats_for_telegram(telegram_id: int | str) -> Dict[str, Any]:
+    r = supabase_get(
+        REQUESTS_TABLE,
+        {
+            "select": "total_amount,total_stems",
+            "telegram_user_id": f"eq.{telegram_id}",
+            "status": "eq.approved",
+        },
+    )
+    if not r.ok:
+        return {"approved_rub": 0, "approved_stems": 0}
+    rows = r.json() or []
+    rub = sum(float(x.get("total_amount") or 0) for x in rows)
+    stems = sum(int(x.get("total_stems") or 0) for x in rows)
+    return {"approved_rub": round(rub, 2), "approved_stems": stems}
+
+
+def build_products_from_flowers(flowers: List[Dict[str, Any]], cuts: List[Dict[str, Any]],
+                              *, for_admin: bool) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    stock_map: Dict[int, int] = {}
+    for row in cuts:
+        flower_id = row.get("flower_type_id")
+        stems = int(row.get("stems_count") or 0)
+        if not flower_id:
+            continue
+        stock_map[flower_id] = stock_map.get(flower_id, 0) + stems
+
+    categories: Dict[str, int] = {"Все": 0}
+    products: List[Dict[str, Any]] = []
+    for flower in flowers:
+        if not for_admin and not flower_catalog_visible(flower):
+            continue
+        name = flower.get("name") or f"Цветок #{flower.get('id')}"
+        category = name.split()[0] if name else "Каталог"
+        stock = flower_effective_stock(flower, stock_map)
+        price = flower_effective_price(flower)
+        item = {
+            "id": flower["id"],
+            "flower_type_id": flower["id"],
+            "name": name,
+            "price": price,
+            "min": 1,
+            "stock": stock,
+            "stem": f"{flower.get('stem_length_cm')} см" if flower.get("stem_length_cm") else "—",
+            "price_label": f"{price:.0f} ₽ / стебель" if price > 0 else "Цена по запросу",
+            "status": "В наличии" if stock > 0 else "Нет в наличии",
+            "available": stock > 0,
+            "category": category,
+            "image": flower_image(flower["id"]),
+            "catalog_visible": flower.get("catalog_visible", True),
+            "price_rub": flower.get("price_rub"),
+            "stock_display_override": flower.get("stock_display_override"),
+        }
+        products.append(item)
+        categories[category] = categories.get(category, 0) + 1
+        categories["Все"] += 1
+
+    category_list = [
+        {"id": "all", "name": "Все", "count": categories.get("Все", len(products))}
+    ] + [
+        {"id": key, "name": key, "count": value}
+        for key, value in categories.items()
+        if key != "Все"
+    ]
+    return products, category_list
+
+
+# -------------------- routes --------------------
+
+@app.after_request
+def add_cors(resp):
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Telegram-Init-Data"
+    resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    return resp
+
+
+@app.route("/api/<path:_>", methods=["OPTIONS"])
+def options_api(_: str):
+    return ("", 204)
+
+
+@app.get("/")
+def health():
+    return jsonify({"ok": True, "service": "blossom-miniapp", "time": now_iso()})
+
+
+@app.get("/miniapp")
+def miniapp():
+    return send_from_directory("static", "index.html")
+
+
+@app.get("/miniapp/<path:filename>")
+def miniapp_file(filename: str):
+    return send_from_directory("static", filename)
+
+
+@app.post("/api/me")
+def api_me():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    if not telegram_id:
+        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
+
+    admin_ids = admin_telegram_ids()
+    is_admin = str(telegram_id) in admin_ids
+
+    try:
+        salon = load_salon_by_tg(telegram_id)
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    if not salon:
+        return jsonify({
+            "ok": True,
+            "linked": False,
+            "salon": None,
+            "message": "Ваш аккаунт не привязан к салону. Обратитесь к администратору.",
+            "is_admin": is_admin,
+            "stats": {"approved_rub": 0, "approved_stems": 0},
+        })
+
+    stats = salon_stats_for_telegram(telegram_id)
+    return jsonify({
+        "ok": True,
+        "linked": True,
+        "salon": salon,
+        "is_admin": is_admin,
+        "stats": stats,
+    })
+
+
+@app.get("/api/products")
+def api_products():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    try:
+        flowers = load_flower_types()
+        cuts_r = supabase_get(
+            "cut_records",
+            {
+                "select": "flower_type_id,stems_count,deleted_at,cut_date",
+                "deleted_at": "is.null",
+            },
+        )
+        if not cuts_r.ok:
+            return jsonify({"ok": False, "error": cuts_r.text}), 500
+        cuts = cuts_r.json() or []
+        products, category_list = build_products_from_flowers(flowers, cuts, for_admin=False)
+        return jsonify({"ok": True, "products": products, "categories": category_list})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.get("/api/admin/catalog")
+def api_admin_catalog():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    try:
+        flowers = load_flower_types()
+        cuts_r = supabase_get(
+            "cut_records",
+            {
+                "select": "flower_type_id,stems_count,deleted_at,cut_date",
+                "deleted_at": "is.null",
+            },
+        )
+        if not cuts_r.ok:
+            return jsonify({"ok": False, "error": cuts_r.text}), 500
+        cuts = cuts_r.json() or []
+        products, _ = build_products_from_flowers(flowers, cuts, for_admin=True)
+        return jsonify({"ok": True, "flowers": products})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/admin/catalog")
+def api_admin_catalog_save():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    payload = request.get_json(silent=True) or {}
+    rows = payload.get("flowers") or []
+    if not isinstance(rows, list):
+        return jsonify({"ok": False, "error": "flowers array required"}), 400
+    try:
+        for row in rows:
+            fid = row.get("id")
+            if fid is None:
+                continue
+            patch: Dict[str, Any] = {}
+            if "catalog_visible" in row:
+                patch["catalog_visible"] = bool(row["catalog_visible"])
+            if "price_rub" in row and row["price_rub"] is not None:
+                patch["price_rub"] = round(float(row["price_rub"]), 2)
+            if "stock_display_override" in row:
+                v = row["stock_display_override"]
+                if v is None or v == "":
+                    patch["stock_display_override"] = None
+                else:
+                    patch["stock_display_override"] = int(v)
+            if not patch:
+                continue
+            r = supabase_patch("flower_types", patch, params={"id": f"eq.{fid}"}, prefer_return=False)
+            if not r.ok:
+                return jsonify({"ok": False, "error": r.text}), 500
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.get("/api/admin/request/<int:request_id>")
+def api_admin_get_request(request_id: int):
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    row = load_request_by_id(request_id)
+    if not row:
+        return jsonify({"ok": False, "error": "request_not_found"}), 404
+    if row.get("status") not in {"new", "change_requested"}:
+        return jsonify({"ok": False, "error": "request_not_editable"}), 400
+    return jsonify({"ok": True, "request": row})
+
+
+@app.post("/api/admin/request/<int:request_id>/revise")
+def api_admin_revise_request(request_id: int):
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items") or []
+    comment = (payload.get("comment") or "").strip()
+    if not items:
+        return jsonify({"ok": False, "error": "items required"}), 400
+    if not comment:
+        return jsonify({"ok": False, "error": "comment required"}), 400
+
+    row = load_request_by_id(request_id)
+    if not row:
+        return jsonify({"ok": False, "error": "request_not_found"}), 404
+    if row.get("status") not in {"new", "change_requested"}:
+        return jsonify({"ok": False, "error": "request_not_editable"}), 400
+
+    total_amount = 0.0
+    total_stems = 0
+    normalized: List[Dict[str, Any]] = []
+    for item in items:
+        qty = int(item.get("qty") or 0)
+        price = parse_rub_price(item.get("price"))
+        if qty <= 0:
+            continue
+        normalized.append({
+            "id": item.get("id"),
+            "name": item.get("name") or "Позиция",
+            "qty": qty,
+            "price": price,
+        })
+        total_amount += qty * price
+        total_stems += qty
+
+    if not normalized:
+        return jsonify({"ok": False, "error": "no valid lines"}), 400
+
+    previous_items = row.get("items") or []
+    patch_body: Dict[str, Any] = {
+        "previous_items": previous_items,
+        "items": normalized,
+        "total_amount": round(total_amount, 2),
+        "total_stems": total_stems,
+        "manager_note": comment,
+        "status": "change_requested",
+        "updated_at": now_iso(),
+    }
+
+    upd = supabase_patch(
+        REQUESTS_TABLE,
+        patch_body,
+        params={"id": f"eq.{request_id}"},
+        prefer_return=True,
+    )
+    if not upd.ok:
+        return jsonify({"ok": False, "error": upd.text}), 500
+    updated = (upd.json() or [row])[0]
+
+    admin_message_id = row.get("admin_message_id")
+    if admin_message_id and ADMIN_CHAT_ID:
+        tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
+    if ADMIN_CHAT_ID:
+        tg_send_message(
+            ADMIN_CHAT_ID,
+            f"✏️ Заявка #{request_id} изменена менеджером.\n{build_items_summary(normalized)}\n"
+            f"Итого: <b>{total_amount:.0f} ₽</b>, стеблей: <b>{total_stems}</b>\n"
+            f"Комментарий: {html.escape(comment)}",
+        )
+    notify_client(updated, "change_requested")
+    return jsonify({"ok": True, "request": updated})
+
+
+@app.post("/api/feedback")
+def api_feedback():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    text = (payload.get("message") or "").strip()
+    if not telegram_id:
+        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
+    if len(text) < 3:
+        return jsonify({"ok": False, "error": "message too short"}), 400
+    try:
+        salon = load_salon_by_tg(telegram_id)
+        if not salon:
+            return jsonify({"ok": False, "error": "guest_forbidden"}), 403
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    if not ADMIN_CHAT_ID:
+        return jsonify({"ok": False, "error": "admin not configured"}), 500
+    name = html.escape(str(payload.get("telegram_name") or "Клиент"))
+    salon_name = html.escape(str(salon.get("name") or "Салон"))
+    tg_send_message(
+        ADMIN_CHAT_ID,
+        f"💬 <b>Обратная связь</b>\nСалон: <b>{salon_name}</b>\nОт: {name} (<code>{html.escape(str(telegram_id))}</code>)\n\n{html.escape(text)}",
+    )
+    return jsonify({"ok": True})
+
+
+def load_requests_for_user(telegram_id: int | str) -> List[Dict[str, Any]]:
+    r = supabase_get(
+        REQUESTS_TABLE,
+        {
+            "select": REQUESTS_SELECT_FULL,
+            "telegram_user_id": f"eq.{telegram_id}",
+            "order": "created_at.desc",
+        },
+    )
+    if r.ok:
+        return r.json() or []
+    r2 = supabase_get(
+        REQUESTS_TABLE,
+        {
+            "select": REQUESTS_SELECT_BASIC,
+            "telegram_user_id": f"eq.{telegram_id}",
+            "order": "created_at.desc",
+        },
+    )
+    if not r2.ok:
+        raise RuntimeError(r2.text)
+    return r2.json() or []
+
+
+@app.post("/api/my-requests")
+def api_my_requests():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    if not telegram_id:
+        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
+
+    try:
+        rows = load_requests_for_user(telegram_id)
+        return jsonify({"ok": True, "requests": rows})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/order")
+def api_order():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    items = payload.get("items") or []
+    telegram_name = (payload.get("telegram_name") or "Клиент").strip() or "Клиент"
+    telegram_username = (payload.get("telegram_username") or "").strip().lstrip("@")
+
+    if not telegram_id:
+        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
+    if not items:
+        return jsonify({"ok": False, "error": "items are required"}), 400
+
+    try:
+        salon = load_salon_by_tg(telegram_id)
+        if not salon:
+            return jsonify({"ok": False, "error": "salon_not_linked", "message": "Заказы доступны только привязанным салонам."}), 403
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+    total_amount = 0.0
+    total_stems = 0
+    normalized_items: List[Dict[str, Any]] = []
+    for item in items:
+        qty = int(item.get("qty") or 0)
+        price = parse_rub_price(item.get("price"))
+        if qty <= 0:
+            continue
+        normalized_items.append({
+            "id": item.get("id"),
+            "name": item.get("name") or "Позиция",
+            "qty": qty,
+            "price": price,
+        })
+        total_amount += qty * price
+        total_stems += qty
+
+    if not normalized_items:
+        return jsonify({"ok": False, "error": "cart is empty"}), 400
+
+    try:
+        salon_id = salon.get("id")
+        salon_name = salon.get("name") or "Салон"
+
+        insert_payload = {
+            "telegram_user_id": telegram_id,
+            "salon_id": salon_id,
+            "salon_name": salon_name,
+            "status": "new",
+            "items": normalized_items,
+            "total_amount": round(total_amount, 2),
+            "total_stems": total_stems,
+        }
+        ins = supabase_post(REQUESTS_TABLE, insert_payload, prefer_return=True)
+        if not ins.ok:
+            return jsonify({"ok": False, "error": ins.text}), 500
+        created = (ins.json() or [None])[0]
+        if not created:
+            return jsonify({"ok": False, "error": "request_not_created"}), 500
+
+        manager_link = build_telegram_link(telegram_id, telegram_username, telegram_name)
+        text = (
+            f"🌸 <b>Новая заявка #{created['id']}</b>\n"
+            f"Салон: <b>{html.escape(salon_name)}</b>\n"
+            f"Менеджер: {manager_link}\n"
+            f"Стеблей: <b>{total_stems}</b>\n"
+            f"Сумма: <b>{total_amount:.0f} ₽</b>\n\n"
+            f"{build_items_summary(normalized_items)}"
+        )
+        buttons = [[
+            {"text": "✅ Подтвердить", "callback_data": f"req:{created['id']}:approve"},
+            {"text": "❌ Отмена", "callback_data": f"req:{created['id']}:reject"},
+            {"text": "✏️ Изменить заявку", "callback_data": f"req:{created['id']}:edit"},
+        ]]
+
+        message = tg_send_message(ADMIN_CHAT_ID, text, buttons) if ADMIN_CHAT_ID else None
+        if message and message.get("result", {}).get("message_id"):
+            supabase_patch(
+                REQUESTS_TABLE,
+                {"admin_message_id": message["result"]["message_id"], "updated_at": now_iso()},
+                params={"id": f"eq.{created['id']}"},
+                prefer_return=False,
+            )
+
+        return jsonify({"ok": True, "request": created})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/request/cancel")
+def api_cancel_request():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    request_id = payload.get("request_id")
+    if not telegram_id or not request_id:
+        return jsonify({"ok": False, "error": "telegram_id and request_id are required"}), 400
+
+    try:
+        row = load_request_by_id(request_id)
+        if not row:
+            return jsonify({"ok": False, "error": "request_not_found"}), 404
+        if str(row.get("telegram_user_id")) != str(telegram_id):
+            return jsonify({"ok": False, "error": "forbidden"}), 403
+        if row.get("status") not in {"new", "change_requested"}:
+            return jsonify({"ok": False, "error": "request_cannot_be_cancelled"}), 400
+
+        upd = supabase_patch(
+            REQUESTS_TABLE,
+            {"status": "cancelled_by_client", "updated_at": now_iso()},
+            params={"id": f"eq.{request_id}"},
+            prefer_return=True,
+        )
+        if not upd.ok:
+            return jsonify({"ok": False, "error": upd.text}), 500
+        updated = (upd.json() or [row])[0]
+
+        admin_message_id = row.get("admin_message_id")
+        if admin_message_id and ADMIN_CHAT_ID:
+            tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
+        if ADMIN_CHAT_ID:
+            tg_send_message(
+                ADMIN_CHAT_ID,
+                f"ℹ️ Клиент отменил заявку #{request_id}.\nСалон: <b>{html.escape(str(row.get('salon_name') or '—'))}</b>",
+            )
+        return jsonify({"ok": True, "request": updated})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/webhook")
+def webhook():
+    payload = request.get_json(silent=True) or {}
+    callback_query = payload.get("callback_query")
+    if not callback_query:
+        return jsonify({"ok": True})
+
+    callback_id = callback_query.get("id")
+    data = callback_query.get("data") or ""
+    message = callback_query.get("message") or {}
+    admin_message_id = message.get("message_id")
+
+    if not data.startswith("req:"):
+        if callback_id:
+            tg_answer_callback(callback_id, "Неизвестное действие")
+        return jsonify({"ok": True})
+
+    try:
+        _, raw_request_id, action = data.split(":", 2)
+        request_row = load_request_by_id(raw_request_id)
+        if not request_row:
+            if callback_id:
+                tg_answer_callback(callback_id, "Заявка не найдена")
+            return jsonify({"ok": True})
+
+        current_status = request_row.get("status")
+        if current_status not in {"new", "change_requested"}:
+            if callback_id:
+                tg_answer_callback(callback_id, f"Уже обработано: {request_status_label(str(current_status))}")
+            if admin_message_id and ADMIN_CHAT_ID:
+                tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
+            return jsonify({"ok": True})
+
+        if action == "edit":
+            if not MINIAPP_BASE_URL:
+                if callback_id:
+                    tg_answer_callback(callback_id, "Задайте MINIAPP_BASE_URL на сервере")
+                return jsonify({"ok": True})
+            if callback_id:
+                tg_answer_callback(callback_id, "Откройте редактор в мини-приложении")
+            web_url = f"{MINIAPP_BASE_URL.rstrip('/')}/miniapp#adminReq={raw_request_id}"
+            if ADMIN_CHAT_ID:
+                tg_send_message(
+                    ADMIN_CHAT_ID,
+                    f"✏️ Редактор заявки <b>#{html.escape(str(raw_request_id))}</b>\n"
+                    f"Измените состав, цены и оставьте комментарий клиенту.",
+                    buttons=[[{"text": "Открыть редактор", "web_app": {"url": web_url}}]],
+                )
+            return jsonify({"ok": True})
+
+        if action == "approve":
+            new_status = "approved"
+            answer_text = "Заявка подтверждена"
+        elif action == "reject":
+            new_status = "rejected"
+            answer_text = "Заявка отменена"
+        else:
+            if callback_id:
+                tg_answer_callback(callback_id, "Неизвестное действие")
+            return jsonify({"ok": True})
+
+        upd = supabase_patch(
+            REQUESTS_TABLE,
+            {"status": new_status, "updated_at": now_iso()},
+            params={"id": f"eq.{raw_request_id}"},
+            prefer_return=True,
+        )
+        if upd.ok:
+            request_row = (upd.json() or [request_row])[0]
+
+        if callback_id:
+            tg_answer_callback(callback_id, answer_text)
+        if admin_message_id and ADMIN_CHAT_ID:
+            tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
+        if ADMIN_CHAT_ID:
+            tg_send_message(ADMIN_CHAT_ID, f"Статус заявки #{raw_request_id}: <b>{request_status_label(new_status)}</b>")
+        notify_client(request_row, new_status)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        if callback_id:
+            tg_answer_callback(callback_id, "Ошибка обработки")
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port)

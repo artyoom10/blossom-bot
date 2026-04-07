@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Blossom Flower Farm</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7f8;
+      --surface: #ffffff;
+      --surface-soft: #f1f3f5;
+      --surface-muted: #eceff2;
+      --text: #16181d;
+      --muted: #6c7380;
+      --border: #e4e8ed;
+      --primary: #1f7a5b;
+      --primary-soft: #e7f5ee;
+      --danger: #b42318;
+      --danger-soft: #fff3f2;
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 18px;
+      --shadow: 0 10px 24px rgba(18, 24, 32, .06);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button { font: inherit; }
+
+    .app {
+      max-width: 430px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding-bottom: 96px;
+      background: var(--bg);
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 16px 16px 14px;
+      background: rgba(246,247,248,.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(228,232,237,.75);
+    }
+    .eyebrow {
+      font-size: 11px;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .title {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.15;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 16px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .section-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .soft-btn {
+      border: 0;
+      background: var(--surface-muted);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card, .product-card, .panel, .profile-card, .request-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+    }
+
+    .category-card {
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      cursor: pointer;
+      text-align: left;
+      box-shadow: var(--shadow);
+    }
+    .category-card.active {
+      background: var(--primary-soft);
+      border-color: #b8e1cf;
+    }
+    .category-name { font-weight: 700; font-size: 15px; }
+    .category-meta { margin-top: 4px; color: var(--muted); font-size: 13px; }
+
+    .stack { display: grid; gap: 12px; }
+
+    .product-card {
+      padding: 12px;
+      transition: transform .15s ease, box-shadow .2s ease;
+      box-shadow: 0 8px 28px rgba(18, 24, 32, .055);
+    }
+    .product-card:hover {
+      box-shadow: 0 12px 32px rgba(18, 24, 32, .08);
+    }
+    .product-card.out {
+      background: #eef1f3;
+      border-color: #d9dfe5;
+      box-shadow: none;
+    }
+    .product-row {
+      display: flex;
+      gap: 12px;
+    }
+    .thumb {
+      width: 96px;
+      height: 96px;
+      object-fit: cover;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: #f1f3f5;
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+    .out .thumb {
+      filter: grayscale(1);
+      opacity: .72;
+    }
+    .product-main { min-width: 0; flex: 1; }
+    .product-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .product-name {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .muted { color: var(--muted); font-size: 13px; }
+    .pill {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pill.out {
+      background: #e4e8ed;
+      color: #667085;
+    }
+    .product-price {
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .btn, .btn-outline, .icon-btn {
+      border: 0;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .btn {
+      flex: 1;
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+    }
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: .55;
+      background: #98a2b3;
+    }
+    .btn-outline {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 16px;
+    }
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      background: var(--surface-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+    }
+
+    .product-hero {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      border-radius: 30px;
+      border: 1px solid var(--border);
+      background: #f1f3f5;
+      box-shadow: var(--shadow);
+    }
+    .product-hero.out {
+      filter: grayscale(1);
+      opacity: .8;
+    }
+    .panel {
+      padding: 16px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .detail-card {
+      background: var(--surface-soft);
+      border-radius: 20px;
+      padding: 14px;
+    }
+    .detail-label { color: var(--muted); font-size: 12px; }
+    .detail-value { margin-top: 6px; font-size: 15px; font-weight: 700; }
+
+    .cart-item {
+      padding: 14px;
+    }
+    .cart-row {
+      display: flex;
+      gap: 12px;
+    }
+    .cart-thumb {
+      width: 68px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: #f1f3f5;
+      cursor: pointer;
+    }
+    .qty-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+    }
+    .qty-value {
+      min-width: 48px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .summary {
+      background: #111827;
+      color: white;
+      border-radius: 28px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      color: rgba(255,255,255,.7);
+      font-size: 13px;
+    }
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 14px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .summary-note { margin-top: 12px; color: rgba(255,255,255,.82); font-size: 13px; }
+
+    .empty, .warning, .success {
+      border-radius: 24px;
+      padding: 16px;
+      font-size: 14px;
+    }
+    .empty { background: #edf1f4; color: var(--muted); }
+    .warning { background: var(--danger-soft); color: var(--danger); border: 1px solid #ffd8d5; }
+    .success { background: var(--primary-soft); color: var(--primary); border: 1px solid #bbe5cf; }
+
+    .request-card {
+      padding: 16px;
+    }
+    .request-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .request-status {
+      background: var(--surface-soft);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .request-status.new { background: #edf7f2; color: var(--primary); }
+    .request-status.change_requested { background: #fff4e5; color: #b54708; }
+    .request-status.approved { background: #eaf6ee; color: #137333; }
+    .request-status.rejected, .request-status.cancelled_by_client { background: #fff1f1; color: var(--danger); }
+
+    .profile-card {
+      padding: 16px;
+    }
+    .profile-top {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .profile-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      background: #ede9fe;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .info-card {
+      background: var(--surface-soft);
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(430px, 100%);
+      z-index: 25;
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(14px);
+      border-top: 1px solid var(--border);
+      padding: 10px 14px 18px;
+    }
+    .nav-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .nav-btn {
+      position: relative;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 18px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .nav-btn.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+    .nav-icon { font-size: 18px; }
+    .nav-badge {
+      position: absolute;
+      top: 6px;
+      right: 14px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--primary);
+      color: white;
+      font-size: 11px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(400px, calc(100% - 24px));
+      z-index: 50;
+      background: #111827;
+      color: white;
+      padding: 12px 14px;
+      border-radius: 18px;
+      box-shadow: 0 18px 34px rgba(17,24,39,.22);
+      font-size: 14px;
+    }
+    .hidden { display: none !important; }
+
+    /* Boot splash (после загрузки HTML с Render) */
+    .boot-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(165deg, #e8f5ef 0%, #f5f0e8 45%, #eef6fb 100%);
+      transition: opacity .55s ease, visibility .55s ease;
+    }
+    .boot-splash--done {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .boot-splash__inner {
+      text-align: center;
+      padding: 32px 28px;
+      max-width: 340px;
+    }
+    .boot-flowers {
+      font-size: 52px;
+      line-height: 1;
+      letter-spacing: 8px;
+      margin-bottom: 18px;
+      animation: boot-float 2.4s ease-in-out infinite;
+    }
+    @keyframes boot-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .boot-splash__brand {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: var(--primary);
+      opacity: .85;
+    }
+    .boot-splash__title {
+      margin: 10px 0 0;
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .boot-splash__msg {
+      margin: 16px 0 0;
+      font-size: 15px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+    .boot-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 28px;
+    }
+    .boot-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      opacity: .35;
+      animation: boot-dot 1.2s ease-in-out infinite;
+    }
+    .boot-dots span:nth-child(2) { animation-delay: .2s; }
+    .boot-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes boot-dot {
+      0%, 100% { opacity: .25; transform: scale(.85); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    .actions--single { margin-top: 12px; }
+    .actions--single .btn { flex: none; width: 100%; }
+
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .qty-stepper--cart {
+      margin-top: 0;
+      flex: 1;
+      min-width: 0;
+    }
+    .qty-input-field {
+      flex: 1;
+      min-width: 0;
+      text-align: center;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px 8px;
+      font-weight: 700;
+      font-size: 15px;
+      background: var(--surface);
+      color: var(--text);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .qty-input-field:focus {
+      outline: 2px solid rgba(31, 122, 91, .35);
+      outline-offset: 1px;
+    }
+    .qty-remove {
+      flex-shrink: 0;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border: 1px solid #ffd8d5;
+    }
+    .qty-remove svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+    }
+    .cart-qty-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="boot-splash" class="boot-splash" aria-live="polite">
+    <div class="boot-splash__inner">
+      <div class="boot-flowers" aria-hidden="true">🌸 🌷 🌼</div>
+      <p class="boot-splash__brand">Blossom Flower Farm</p>
+      <h2 class="boot-splash__title">Загружаем сад</h2>
+      <p class="boot-splash__msg" id="boot-splash-msg">Связываемся с сервером…</p>
+      <div class="boot-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+  <div id="app"></div>
+
+  <script>
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (_) {}
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+
+    const state = {
+      activeTab: 'home',
+      activeCategory: 'all',
+      selectedProductId: null,
+      cart: {},
+      submitting: false,
+      products: [],
+      categories: [{ id: 'all', name: 'Все', count: 0 }],
+      requests: [],
+      linked: false,
+      salon: null,
+      meMessage: '',
+      loadingProducts: true,
+      loadingProfile: true,
+      loadingRequests: false,
+      apiError: '',
+      notice: '',
+      telegramId: tgUser?.id || urlParams.get('tg_id') || null,
+      telegramName: [tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(' ') || 'Гость',
+      telegramUsername: tgUser?.username || '',
+    };
+
+    function haptic(type = 'light') {
+      try { tg?.HapticFeedback?.impactOccurred?.(type); } catch (_) {}
+    }
+    function notifySuccess() {
+      try { tg?.HapticFeedback?.notificationOccurred?.('success'); } catch (_) {}
+    }
+    function showNotice(text) {
+      state.notice = text;
+      render();
+      window.clearTimeout(showNotice._timer);
+      showNotice._timer = window.setTimeout(() => {
+        state.notice = '';
+        render();
+      }, 2500);
+    }
+
+    function money(value) {
+      const num = Number(value || 0);
+      return `${Math.round(num)} ₽`;
+    }
+
+    function sleep(ms) {
+      return new Promise((r) => setTimeout(r, ms));
+    }
+
+    function setBootMessage(text) {
+      const el = document.getElementById('boot-splash-msg');
+      if (el) el.textContent = text;
+    }
+
+    function hideBootSplash() {
+      const el = document.getElementById('boot-splash');
+      if (!el) return;
+      el.classList.add('boot-splash--done');
+      window.setTimeout(() => el.remove(), 600);
+    }
+
+    /** Строка «остаток» без лишнего «— ·», если длина стебля не задана */
+    function productStockLine(item) {
+      const stem = String(item.stem ?? '').trim();
+      const hasStem = stem && stem !== '—' && stem !== '-';
+      const stemPart = hasStem ? `${escapeHtml(stem)} · ` : '';
+      return `${stemPart}Остаток: ${item.stock}`;
+    }
+
+    const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+
+    function renderQtyStepper(item, variant) {
+      const id = item.id;
+      const qty = state.cart[id] || 0;
+      if (qty <= 0) return '';
+      const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
+      return `
+        <div class="qty-stepper${extra}">
+          <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 1" onmousedown="event.preventDefault()">−</button>
+          <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+            data-action="qty-input" data-id="${id}" value="${qty}" aria-label="Количество стеблей" />
+          <button type="button" class="icon-btn qty-step" data-action="qty-plus" data-id="${id}" aria-label="Добавить 5" onmousedown="event.preventDefault()">+</button>
+          <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
+        </div>
+      `;
+    }
+
+    function requestStatusLabel(status) {
+      const map = {
+        new: 'Новая',
+        approved: 'Подтверждена',
+        rejected: 'Отклонена',
+        change_requested: 'Нужно изменить',
+        cancelled_by_client: 'Отменена вами',
+      };
+      return map[status] || status;
+    }
+
+    function categoryId(name) {
+      return name === 'Все' ? 'all' : name;
+    }
+
+    function setActiveTab(tab) {
+      state.activeTab = tab;
+      render();
+    }
+
+    function selectedProduct() {
+      return state.products.find((item) => item.id === state.selectedProductId) || null;
+    }
+
+    function cartItems() {
+      return Object.entries(state.cart)
+        .map(([id, qty]) => {
+          const product = state.products.find((item) => String(item.id) === String(id));
+          if (!product || qty <= 0) return null;
+          return {
+            ...product,
+            qty,
+            total: qty * Number(product.price || 0),
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function cartCount() {
+      return cartItems().reduce((sum, item) => sum + item.qty, 0);
+    }
+
+    function cartTotal() {
+      return cartItems().reduce((sum, item) => sum + item.total, 0);
+    }
+
+    function filteredProducts() {
+      if (state.activeCategory === 'all') return state.products;
+      return state.products.filter((item) => item.category === state.activeCategory);
+    }
+
+    async function api(path, options = {}) {
+      const res = await fetch(path, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    function isRetryableApiError(err, res) {
+      if (err && err.name === 'TypeError') return true;
+      if (res == null) return true;
+      const s = res.status;
+      return s === 502 || s === 503 || s === 504 || s === 524 || s === 408 || s === 0;
+    }
+
+    /** Повторы при «засыпании» Render и сетевых сбоях */
+    async function apiWakeAware(path, options = {}) {
+      const maxAttempts = 14;
+      let lastErr = new Error('Сеть недоступна');
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        let res = null;
+        try {
+          res = await fetch(path, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok !== false) return data;
+          lastErr = new Error(data.error || `HTTP ${res.status}`);
+          if (!isRetryableApiError(null, res)) throw lastErr;
+        } catch (e) {
+          lastErr = e instanceof Error ? e : new Error(String(e));
+          if (!isRetryableApiError(lastErr, res)) throw lastErr;
+        }
+        setBootMessage('Сервер ненадолго «заснул» — подождите, он просыпается…');
+        await sleep(900 + attempt * 350);
+      }
+      throw lastErr;
+    }
+
+    async function loadProfile() {
+      state.loadingProfile = true;
+      render();
+      if (!state.telegramId) {
+        state.linked = false;
+        state.salon = null;
+        state.meMessage = 'Откройте мини-приложение через Telegram.';
+        state.loadingProfile = false;
+        render();
+        return;
+      }
+      try {
+        const data = await apiWakeAware('/api/me', {
+          method: 'POST',
+          body: JSON.stringify({ telegram_id: state.telegramId }),
+        });
+        state.linked = !!data.linked;
+        state.salon = data.salon || null;
+        state.meMessage = data.message || '';
+      } catch (err) {
+        state.linked = false;
+        state.salon = null;
+        state.meMessage = 'Не удалось загрузить профиль салона.';
+      } finally {
+        state.loadingProfile = false;
+        render();
+      }
+    }
+
+    async function loadProducts() {
+      state.loadingProducts = true;
+      render();
+      try {
+        const data = await apiWakeAware('/api/products');
+        state.products = data.products || [];
+        state.categories = data.categories || [{ id: 'all', name: 'Все', count: state.products.length }];
+      } catch (err) {
+        state.apiError = err.message || 'Не удалось загрузить каталог';
+      } finally {
+        state.loadingProducts = false;
+        render();
+      }
+    }
+
+    async function loadRequests() {
+      if (!state.telegramId) return;
+      state.loadingRequests = true;
+      render();
+      try {
+        const data = await apiWakeAware('/api/my-requests', {
+          method: 'POST',
+          body: JSON.stringify({ telegram_id: state.telegramId }),
+        });
+        state.requests = data.requests || [];
+      } catch (err) {
+        state.requests = [];
+      } finally {
+        state.loadingRequests = false;
+        render();
+      }
+    }
+
+    function addToCart(product) {
+      if (!product.available) return;
+      state.cart[product.id] = 15;
+      haptic('light');
+      showNotice(`${product.name} · 15 стеблей в корзине`);
+      render();
+    }
+
+    function changeQty(productId, delta) {
+      const product = state.products.find((p) => String(p.id) === String(productId));
+      const current = state.cart[productId] || 0;
+      let next = current + delta;
+      if (next <= 0) {
+        delete state.cart[productId];
+      } else {
+        const maxStock = product && Number.isFinite(Number(product.stock)) ? Number(product.stock) : null;
+        if (maxStock != null && next > maxStock) {
+          next = maxStock;
+          showNotice(`В наличии не более ${maxStock} шт.`);
+        }
+        state.cart[productId] = next;
+      }
+      haptic('light');
+      render();
+    }
+
+    function setQtyFromInput(productId, raw) {
+      const product = state.products.find((p) => String(p.id) === String(productId));
+      const digits = String(raw || '').replace(/\D/g, '');
+      const v = parseInt(digits, 10);
+      if (!Number.isFinite(v) || v < 1) {
+        delete state.cart[productId];
+      } else {
+        let next = v;
+        const maxStock = product && Number.isFinite(Number(product.stock)) ? Number(product.stock) : null;
+        if (maxStock != null && next > maxStock) {
+          next = maxStock;
+          showNotice(`В наличии не более ${maxStock} шт.`);
+        }
+        state.cart[productId] = next;
+      }
+      haptic('light');
+      render();
+    }
+
+    function openProduct(productId) {
+      state.selectedProductId = productId;
+      state.activeTab = 'product';
+      render();
+    }
+
+    async function submitOrder() {
+      const items = cartItems();
+      if (!items.length || state.submitting) return;
+      state.submitting = true;
+      render();
+      try {
+        await api('/api/order', {
+          method: 'POST',
+          body: JSON.stringify({
+            telegram_id: state.telegramId,
+            telegram_name: state.telegramName,
+            telegram_username: state.telegramUsername,
+            items: items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              qty: item.qty,
+              price: item.price,
+            })),
+          }),
+        });
+        state.cart = {};
+        state.activeTab = 'orders';
+        await loadRequests();
+        notifySuccess();
+        showNotice('Заявка отправлена менеджеру');
+      } catch (err) {
+        showNotice(err.message || 'Не удалось отправить заявку');
+      } finally {
+        state.submitting = false;
+        render();
+      }
+    }
+
+    async function cancelRequest(requestId) {
+      try {
+        await api('/api/request/cancel', {
+          method: 'POST',
+          body: JSON.stringify({ telegram_id: state.telegramId, request_id: requestId }),
+        });
+        notifySuccess();
+        showNotice('Заявка отменена');
+        await loadRequests();
+      } catch (err) {
+        showNotice(err.message || 'Не удалось отменить заявку');
+      }
+    }
+
+    function updateTelegramButtons() {
+      if (!tg?.MainButton) return;
+      try { tg.MainButton.offClick(submitOrder); } catch (_) {}
+      try { tg.MainButton.offClick(goToCheckout); } catch (_) {}
+      try { tg.MainButton.offClick(openCart); } catch (_) {}
+      try { tg.BackButton.offClick(goBack); } catch (_) {}
+
+      const count = cartCount();
+      if (state.activeTab === 'home' && count > 0) {
+        tg.MainButton.setText(`Корзина · ${count}`);
+        tg.MainButton.show();
+        tg.MainButton.enable();
+        tg.MainButton.onClick(openCart);
+      } else if (state.activeTab === 'cart' && count > 0) {
+        tg.MainButton.setText('Оформить заявку');
+        tg.MainButton.show();
+        tg.MainButton.enable();
+        tg.MainButton.onClick(goToCheckout);
+      } else if (state.activeTab === 'checkout' && count > 0) {
+        tg.MainButton.setText(state.submitting ? 'Отправляем...' : `Отправить заявку · ${money(cartTotal())}`);
+        tg.MainButton.show();
+        if (state.submitting) tg.MainButton.disable(); else tg.MainButton.enable();
+        tg.MainButton.onClick(submitOrder);
+      } else {
+        tg.MainButton.hide();
+      }
+
+      if (state.activeTab === 'product' || state.activeTab === 'checkout') {
+        tg.BackButton.show();
+        tg.BackButton.onClick(goBack);
+      } else {
+        tg.BackButton.hide();
+      }
+    }
+
+    function openCart() {
+      state.activeTab = 'cart';
+      render();
+    }
+
+    function goToCheckout() {
+      state.activeTab = 'checkout';
+      render();
+    }
+
+    function goBack() {
+      if (state.activeTab === 'product') {
+        state.activeTab = 'home';
+      } else if (state.activeTab === 'checkout') {
+        state.activeTab = 'cart';
+      }
+      render();
+    }
+
+    function renderHeader() {
+      const salonName = state.linked && state.salon?.name ? state.salon.name : 'Гость';
+      return `
+        <header class="header">
+          <div class="eyebrow">Blossom Flower Farm</div>
+          <h1 class="title">Личный кабинет ${escapeHtml(salonName)}</h1>
+        </header>
+      `;
+    }
+
+    function renderCategories() {
+      return `
+        <section>
+          <div class="section-head">
+            <h3 class="section-title">Категории</h3>
+            <button class="soft-btn" data-action="reset-category">Сбросить</button>
+          </div>
+          <div class="grid-2">
+            ${state.categories.map((category) => `
+              <button class="category-card ${state.activeCategory === category.id ? 'active' : ''}" data-action="category" data-category="${escapeHtml(categoryId(category.name))}">
+                <div class="category-name">${escapeHtml(category.name)}</div>
+                <div class="category-meta">${category.count} позиций</div>
+              </button>
+            `).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderHome() {
+      const list = filteredProducts();
+      return `
+        ${renderCategories()}
+        <section>
+          <div class="section-head">
+            <h3 class="section-title">Каталог</h3>
+          </div>
+          <div class="stack">
+            ${state.loadingProducts ? `<div class="empty">Загружаем каталог...</div>` : ''}
+            ${!state.loadingProducts && !list.length ? `<div class="empty">В каталоге пока нет позиций.</div>` : ''}
+            ${list.map((item) => renderProductCard(item)).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderProductCard(item) {
+      const inCart = (state.cart[item.id] || 0) > 0;
+      return `
+        <article class="product-card ${item.available ? '' : 'out'}">
+          <div class="product-row">
+            <img class="thumb" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" data-action="open-product" data-id="${item.id}" />
+            <div class="product-main">
+              <div class="product-top">
+                <div>
+                  <h4 class="product-name">${escapeHtml(item.name)}</h4>
+                  <div class="muted">${productStockLine(item)}</div>
+                </div>
+                <span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>
+              </div>
+              <div class="product-price">${escapeHtml(item.price_label)}</div>
+            </div>
+          </div>
+          <div class="actions actions--single">
+            ${inCart
+              ? renderQtyStepper(item, 'card')
+              : `<button class="btn" data-action="add" data-id="${item.id}" ${item.available ? '' : 'disabled'}>
+              ${item.available ? 'В корзину' : 'Нет в наличии'}
+            </button>`}
+          </div>
+        </article>
+      `;
+    }
+
+    function renderProduct() {
+      const item = selectedProduct();
+      if (!item) {
+        return `<div class="empty">Товар не найден.</div>`;
+      }
+      const inCart = state.cart[item.id] || 0;
+      return `
+        <section class="stack">
+          <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" />
+          <div class="panel">
+            <div class="product-top">
+              <div>
+                <h2 class="title" style="font-size:26px;">${escapeHtml(item.name)}</h2>
+                <div class="muted" style="margin-top:8px;">Остаток: ${item.stock}</div>
+              </div>
+              <span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-card">
+                <div class="detail-label">Цена</div>
+                <div class="detail-value">${escapeHtml(item.price_label)}</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">В корзине</div>
+                <div class="detail-value">${inCart} шт.</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Длина стебля</div>
+                <div class="detail-value">${escapeHtml(item.stem)}</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Наличие</div>
+                <div class="detail-value">${item.stock} шт.</div>
+              </div>
+            </div>
+            <div class="actions actions--single" style="margin-top:16px;">
+              ${inCart
+                ? renderQtyStepper(item, 'card')
+                : `<button class="btn" data-action="add" data-id="${item.id}" ${item.available ? '' : 'disabled'}>
+                ${item.available ? 'Добавить в корзину' : 'Нет в наличии'}
+              </button>`}
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderCart() {
+      const items = cartItems();
+      return `
+        <section class="stack">
+          <div class="panel">
+            <div class="section-head" style="margin-bottom:0;">
+              <h2 class="section-title">Корзина</h2>
+              <span class="pill">${cartCount()} шт.</span>
+            </div>
+            <div class="muted" style="margin-top:6px;">Соберите заявку для менеджера фермы</div>
+          </div>
+          ${!items.length ? `<div class="empty">Корзина пока пустая. Добавьте позиции из каталога.</div>` : `
+            <div class="stack">
+              ${items.map((item) => `
+                <article class="card cart-item">
+                  <div class="cart-row">
+                    <img class="cart-thumb" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" data-action="open-product" data-id="${item.id}" />
+                    <div style="min-width:0; flex:1;">
+                      <div class="product-top">
+                        <div>
+                          <h3 class="product-name">${escapeHtml(item.name)}</h3>
+                          <div class="muted">${escapeHtml(item.price_label)}</div>
+                        </div>
+                        <div style="font-weight:700;">${money(item.total)}</div>
+                      </div>
+                      <div class="cart-qty-wrap">
+                        ${renderQtyStepper(item, 'cart')}
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              `).join('')}
+              <div class="summary">
+                <div class="summary-row"><span>Позиций</span><span>${items.length}</span></div>
+                <div class="summary-row" style="margin-top:8px;"><span>Стеблей</span><span>${cartCount()}</span></div>
+                <div class="summary-total"><span>Итого</span><span>${money(cartTotal())}</span></div>
+                <div class="summary-note">Для отправки заявки используйте системную кнопку Telegram снизу.</div>
+              </div>
+            </div>
+          `}
+        </section>
+      `;
+    }
+
+    function renderCheckout() {
+      return `
+        <section class="stack">
+          <div class="panel">
+            <h2 class="section-title">Оформление заявки</h2>
+            <div class="muted" style="margin-top:6px;">После отправки менеджер получит заявку и ответит в Telegram.</div>
+            <div class="detail-grid">
+              <div class="detail-card">
+                <div class="detail-label">Салон</div>
+                <div class="detail-value">${escapeHtml(state.salon?.name || 'Не привязан')}</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Сумма</div>
+                <div class="detail-value">${money(cartTotal())}</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Стеблей</div>
+                <div class="detail-value">${cartCount()}</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Статус</div>
+                <div class="detail-value">Ожидает отправки</div>
+              </div>
+            </div>
+            <div class="success" style="margin-top:16px;">Нажмите системную кнопку Telegram снизу, чтобы отправить заявку.</div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderRequests() {
+      return `
+        <section class="stack">
+          <div class="section-head">
+            <h2 class="section-title">Мои заявки</h2>
+            <button class="soft-btn" data-action="reload-requests">Обновить</button>
+          </div>
+          ${state.loadingRequests ? `<div class="empty">Загружаем заявки...</div>` : ''}
+          ${!state.loadingRequests && !state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
+          ${state.requests.map((item) => `
+            <article class="request-card">
+              <div class="request-head">
+                <div>
+                  <div class="product-name">Заявка #${item.id}</div>
+                  <div class="muted" style="margin-top:4px;">${escapeHtml(item.salon_name || 'Не привязан к салону')}</div>
+                </div>
+                <span class="request-status ${item.status}">${escapeHtml(requestStatusLabel(item.status))}</span>
+              </div>
+              <div class="muted" style="margin-top:10px;">Стеблей: ${item.total_stems || 0} · Сумма: ${money(item.total_amount || 0)}</div>
+              <div class="stack" style="gap:8px; margin-top:12px;">
+                ${(item.items || []).map((row) => `<div class="muted">• ${escapeHtml(row.name)} — ${row.qty} шт</div>`).join('')}
+              </div>
+              ${(item.status === 'new' || item.status === 'change_requested') ? `
+                <div class="actions" style="margin-top:14px;">
+                  <button class="btn-outline" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
+                </div>
+              ` : ''}
+            </article>
+          `).join('')}
+        </section>
+      `;
+    }
+
+    function renderProfile() {
+      if (state.loadingProfile) {
+        return `<div class="empty">Загружаем профиль...</div>`;
+      }
+      if (!state.linked || !state.salon) {
+        return `
+          <section class="stack">
+            <div class="warning">${escapeHtml(state.meMessage || 'Ваш аккаунт не привязан к салону. Обратитесь к администратору.')}</div>
+          </section>
+        `;
+      }
+      return `
+        <section class="stack">
+          <div class="profile-card">
+            <div class="profile-top">
+              <div class="profile-avatar">🏬</div>
+              <div>
+                <div class="product-name">${escapeHtml(state.salon.name || 'Салон')}</div>
+                <div class="muted">Оптовый кабинет Blossom Flower Farm</div>
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="info-card">
+                <div class="detail-label">Телефон</div>
+                <div class="detail-value">${escapeHtml(state.salon.phone || '—')}</div>
+              </div>
+              <div class="info-card">
+                <div class="detail-label">Адрес</div>
+                <div class="detail-value">${escapeHtml(state.salon.address || '—')}</div>
+              </div>
+              <div class="info-card">
+                <div class="detail-label">Статус</div>
+                <div class="detail-value">Активный клиент</div>
+              </div>
+              <div class="info-card">
+                <div class="detail-label">Поставщик</div>
+                <div class="detail-value">Blossom Flower Farm</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    function renderNav() {
+      const count = cartCount();
+      const tabs = [
+        ['home', '🏠', 'Каталог'],
+        ['cart', '🧺', 'Корзина'],
+        ['orders', '↺', 'Заявки'],
+        ['profile', '👤', 'Профиль'],
+      ];
+      return `
+        <nav class="bottom-nav">
+          <div class="nav-grid">
+            ${tabs.map(([tab, icon, label]) => `
+              <button class="nav-btn ${state.activeTab === tab ? 'active' : ''}" data-action="tab" data-tab="${tab}">
+                <span class="nav-icon">${icon}</span>
+                <span>${label}</span>
+                ${tab === 'cart' && count > 0 ? `<span class="nav-badge">${count}</span>` : ''}
+              </button>
+            `).join('')}
+          </div>
+        </nav>
+      `;
+    }
+
+    function render() {
+      const app = document.getElementById('app');
+      const screen = state.activeTab === 'home' ? renderHome()
+        : state.activeTab === 'product' ? renderProduct()
+        : state.activeTab === 'cart' ? renderCart()
+        : state.activeTab === 'checkout' ? renderCheckout()
+        : state.activeTab === 'orders' ? renderRequests()
+        : renderProfile();
+
+      app.innerHTML = `
+        <div class="app">
+          ${renderHeader()}
+          <main class="content">
+            ${state.apiError ? `<div class="warning">${escapeHtml(state.apiError)}</div>` : ''}
+            ${screen}
+          </main>
+          ${renderNav()}
+          ${state.notice ? `<div class="toast">${escapeHtml(state.notice)}</div>` : ''}
+        </div>
+      `;
+
+      updateTelegramButtons();
+    }
+
+    document.addEventListener('click', async (event) => {
+      const target = event.target.closest('[data-action]');
+      if (!target) return;
+      const action = target.dataset.action;
+      const id = target.dataset.id;
+
+      if (action === 'tab') {
+        setActiveTab(target.dataset.tab);
+      }
+      if (action === 'category') {
+        state.activeCategory = target.dataset.category;
+        render();
+      }
+      if (action === 'reset-category') {
+        state.activeCategory = 'all';
+        render();
+      }
+      if (action === 'open-product') {
+        openProduct(Number(id));
+      }
+      if (action === 'add') {
+        const product = state.products.find((item) => String(item.id) === String(id));
+        if (product) addToCart(product);
+      }
+      if (action === 'qty-minus') {
+        changeQty(id, -1);
+      }
+      if (action === 'qty-plus') {
+        changeQty(id, 5);
+      }
+      if (action === 'remove') {
+        changeQty(id, -999999);
+      }
+      if (action === 'reload-requests') {
+        await loadRequests();
+      }
+      if (action === 'cancel-request') {
+        await cancelRequest(id);
+      }
+    });
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+    function escapeAttr(value) { return escapeHtml(value); }
+
+    let qtyInputBlurTimer = null;
+    document.addEventListener(
+      'pointerdown',
+      (event) => {
+        const el = event.target && event.target.closest ? event.target.closest('[data-action]') : null;
+        if (!el) return;
+        const a = el.dataset.action;
+        if (a === 'qty-minus' || a === 'qty-plus' || a === 'remove') {
+          window.clearTimeout(qtyInputBlurTimer);
+        }
+      },
+      true,
+    );
+    document.addEventListener(
+      'focusout',
+      (event) => {
+        const t = event.target;
+        if (!t || !t.getAttribute || t.getAttribute('data-action') !== 'qty-input') return;
+        const pid = t.dataset.id;
+        if (pid == null) return;
+        const val = t.value;
+        window.clearTimeout(qtyInputBlurTimer);
+        qtyInputBlurTimer = window.setTimeout(() => {
+          qtyInputBlurTimer = null;
+          setQtyFromInput(pid, val);
+        }, 200);
+      },
+      true,
+    );
+
+    async function init() {
+      render();
+      window.setTimeout(() => {
+        const splash = document.getElementById('boot-splash');
+        if (splash && !splash.classList.contains('boot-splash--done')) {
+          setBootMessage('Если долго ждёте — сервер мог уснуть на хостинге, сейчас проснётся…');
+        }
+      }, 5000);
+      try {
+        await Promise.all([loadProducts(), loadProfile(), loadRequests()]);
+      } finally {
+        hideBootSplash();
+        render();
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
