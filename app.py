@@ -39,12 +39,49 @@ HEADERS = {
 app.config["JSON_AS_ASCII"] = False
 
 
+def normalize_tg_user_id(value: Any) -> str:
+    """
+    Единый формат числового Telegram user id для сравнения с ADMIN_TELEGRAM_IDS.
+    Убирает кавычки, BOM, пробелы; поддерживает int/float/str; вытаскивает длинную
+    цепочку цифр из строк вида «id: 123456789».
+    """
+    if value is None or isinstance(value, bool):
+        return ""
+    if isinstance(value, int):
+        return str(value) if value > 0 else ""
+    if isinstance(value, float):
+        try:
+            i = int(value)
+            return str(i) if i > 0 else ""
+        except (ValueError, OverflowError):
+            return ""
+    s = str(value).strip().strip('"').strip("'")
+    for ch in ("\ufeff", "\u200b", "\u200c", "\u200d"):
+        s = s.replace(ch, "")
+    s = re.sub(r"\s+", "", s)
+    if not s:
+        return ""
+    if s.startswith("-") and s[1:].isdigit():
+        return s
+    if s.isdigit():
+        return str(int(s))
+    m = re.search(r"\d{8,}", s)
+    if m:
+        return m.group(0)
+    return ""
+
+
 def admin_telegram_ids() -> Set[str]:
-    raw = os.getenv("ADMIN_TELEGRAM_IDS", "")
-    ids = {x.strip() for x in raw.split(",") if x.strip()}
-    one = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
-    if one:
-        ids.add(one)
+    ids: Set[str] = set()
+    raw = os.getenv("ADMIN_TELEGRAM_IDS", "") or ""
+    for part in re.split(r"[\s,;|]+", raw):
+        n = normalize_tg_user_id(part)
+        if n:
+            ids.add(n)
+    one = os.getenv("ADMIN_TELEGRAM_ID", "") or ""
+    n = normalize_tg_user_id(one)
+    if n:
+        ids.add(n)
     return ids
 
 
@@ -190,8 +227,8 @@ def require_admin_from_header() -> Tuple[Optional[Dict[str, Any]], Optional[Tupl
     user = validate_webapp_init_data(init_data)
     if not user:
         return None, (jsonify({"ok": False, "error": "invalid_init_data"}), 401)
-    uid = str(user.get("id") or "")
-    if uid not in admin_telegram_ids():
+    uid = normalize_tg_user_id(user.get("id"))
+    if not uid or uid not in admin_telegram_ids():
         return None, (jsonify({"ok": False, "error": "forbidden"}), 403)
     return user, None
 
@@ -499,11 +536,12 @@ def api_me():
 
     payload = request.get_json(silent=True) or {}
     telegram_id = payload.get("telegram_id")
-    if not telegram_id:
+    if telegram_id is None or telegram_id == "":
         return jsonify({"ok": False, "error": "telegram_id is required"}), 400
 
     admin_ids = admin_telegram_ids()
-    is_admin = str(telegram_id) in admin_ids
+    tid_norm = normalize_tg_user_id(telegram_id)
+    is_admin = bool(tid_norm) and tid_norm in admin_ids
 
     try:
         salon = load_salon_by_tg(telegram_id)

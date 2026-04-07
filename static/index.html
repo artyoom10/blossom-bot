@@ -900,6 +900,13 @@
       orderSuccessVisible: false,
     };
 
+    /** В JSON как строка, чтобы не терять точность у длинных Telegram id. */
+    function tgIdForApi() {
+      const id = state.telegramId;
+      if (id === null || id === undefined || id === '') return null;
+      return String(id);
+    }
+
     let orderSuccessTimer = null;
     function showOrderSuccessOverlay() {
       window.clearTimeout(orderSuccessTimer);
@@ -1185,7 +1192,7 @@
         await api('/api/request/revision-response', {
           method: 'POST',
           body: JSON.stringify({
-            telegram_id: state.telegramId,
+            telegram_id: tgIdForApi(),
             request_id: requestId,
             decision,
           }),
@@ -1245,7 +1252,7 @@
       try {
         const data = await apiWakeAware('/api/me', {
           method: 'POST',
-          body: JSON.stringify({ telegram_id: state.telegramId }),
+          body: JSON.stringify({ telegram_id: tgIdForApi() }),
         });
         state.linked = !!data.linked;
         state.salon = data.salon || null;
@@ -1284,7 +1291,7 @@
       try {
         const data = await apiWakeAware('/api/my-requests', {
           method: 'POST',
-          body: JSON.stringify({ telegram_id: state.telegramId }),
+          body: JSON.stringify({ telegram_id: tgIdForApi() }),
         });
         state.requests = data.requests || [];
       } catch (err) {
@@ -1355,7 +1362,7 @@
         await api('/api/order', {
           method: 'POST',
           body: JSON.stringify({
-            telegram_id: state.telegramId,
+            telegram_id: tgIdForApi(),
             telegram_name: state.telegramName,
             telegram_username: state.telegramUsername,
             items: items.map((item) => ({
@@ -1384,7 +1391,7 @@
       try {
         await api('/api/request/cancel', {
           method: 'POST',
-          body: JSON.stringify({ telegram_id: state.telegramId, request_id: requestId }),
+          body: JSON.stringify({ telegram_id: tgIdForApi(), request_id: requestId }),
         });
         notifySuccess();
         showNotice('Заявка отменена');
