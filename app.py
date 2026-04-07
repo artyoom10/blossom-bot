@@ -48,11 +48,15 @@ def normalize_tg_user_id(value: Any) -> str:
     if value is None or isinstance(value, bool):
         return ""
     if isinstance(value, int):
-        return str(value) if value > 0 else ""
+        if value == 0:
+            return ""
+        return str(value)
     if isinstance(value, float):
         try:
             i = int(value)
-            return str(i) if i > 0 else ""
+            if i == 0:
+                return ""
+            return str(i)
         except (ValueError, OverflowError):
             return ""
     s = str(value).strip().strip('"').strip("'")
@@ -83,6 +87,20 @@ def admin_telegram_ids() -> Set[str]:
     if n:
         ids.add(n)
     return ids
+
+
+def admin_chat_id_normalized() -> str:
+    """ADMIN_CHAT_ID из env (чат уведомлений); часто совпадает с user id личного чата с ботом."""
+    return normalize_tg_user_id(os.getenv("ADMIN_CHAT_ID", "") or "")
+
+
+def is_user_telegram_admin(tid_key: str) -> bool:
+    if not tid_key:
+        return False
+    if tid_key in admin_telegram_ids():
+        return True
+    ac = admin_chat_id_normalized()
+    return bool(ac) and tid_key == ac
 
 
 def public_miniapp_base_url() -> str:
@@ -228,7 +246,7 @@ def require_admin_from_header() -> Tuple[Optional[Dict[str, Any]], Optional[Tupl
     if not user:
         return None, (jsonify({"ok": False, "error": "invalid_init_data"}), 401)
     uid = normalize_tg_user_id(user.get("id"))
-    if not uid or uid not in admin_telegram_ids():
+    if not uid or not is_user_telegram_admin(uid):
         return None, (jsonify({"ok": False, "error": "forbidden"}), 403)
     return user, None
 
@@ -539,9 +557,8 @@ def api_me():
     if telegram_id is None or telegram_id == "":
         return jsonify({"ok": False, "error": "telegram_id is required"}), 400
 
-    admin_ids = admin_telegram_ids()
     tid_norm = normalize_tg_user_id(telegram_id)
-    is_admin = bool(tid_norm) and tid_norm in admin_ids
+    is_admin = is_user_telegram_admin(tid_norm)
 
     try:
         salon = load_salon_by_tg(telegram_id)

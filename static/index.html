@@ -907,6 +907,10 @@
       return String(id);
     }
 
+    function canSalonOrder() {
+      return state.linked && !!state.salon;
+    }
+
     let orderSuccessTimer = null;
     function showOrderSuccessOverlay() {
       window.clearTimeout(orderSuccessTimer);
@@ -980,7 +984,7 @@
       const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
       return `
         <div class="qty-stepper${extra}">
-          <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 1" onmousedown="event.preventDefault()">−</button>
+          <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 5" onmousedown="event.preventDefault()">−</button>
           <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
             data-action="qty-input" data-id="${id}" value="${qty}" aria-label="Количество стеблей" />
           <button type="button" class="icon-btn qty-step" data-action="qty-plus" data-id="${id}" aria-label="Добавить 5" onmousedown="event.preventDefault()">+</button>
@@ -1303,6 +1307,10 @@
     }
 
     function addToCart(product) {
+      if (!canSalonOrder()) {
+        showNotice('Корзина доступна только привязанным салонам');
+        return;
+      }
       if (!product.available) return;
       state.cart[product.id] = 15;
       haptic('light');
@@ -1537,9 +1545,9 @@
           <div class="actions actions--single">
             ${inCart
               ? renderQtyStepper(item, 'card')
-              : `<button class="btn" data-action="add" data-id="${item.id}" ${item.available ? '' : 'disabled'}>
-              ${item.available ? 'В корзину' : 'Нет в наличии'}
-            </button>`}
+              : item.available && canSalonOrder()
+                ? `<button class="btn" data-action="add" data-id="${item.id}">В корзину</button>`
+                : `<button class="btn" disabled data-id="${item.id}">${!item.available ? 'Нет в наличии' : 'Только для салонов'}</button>`}
           </div>
         </article>
       `;
@@ -1583,9 +1591,9 @@
             <div class="actions actions--single" style="margin-top:16px;">
               ${inCart
                 ? renderQtyStepper(item, 'card')
-                : `<button class="btn" data-action="add" data-id="${item.id}" ${item.available ? '' : 'disabled'}>
-                ${item.available ? 'Добавить в корзину' : 'Нет в наличии'}
-              </button>`}
+                : item.available && canSalonOrder()
+                  ? `<button class="btn" data-action="add" data-id="${item.id}">Добавить в корзину</button>`
+                  : `<button class="btn" disabled data-id="${item.id}">${!item.available ? 'Нет в наличии' : 'Только для салонов'}</button>`}
             </div>
           </div>
         </section>
@@ -1726,7 +1734,7 @@
                 </div>
               </div>
               <p class="muted" style="margin-top:14px;line-height:1.45;">Салон не привязан — оформление заявок как у клиента недоступно. Все заявки и каталог — во вкладке «Админ».</p>
-              ${state.telegramId ? `<p class="muted" style="margin-top:12px;font-size:12px;line-height:1.4;">Если вкладки «Админ» нет внизу, на сервере в Render задайте переменную <b>ADMIN_TELEGRAM_IDS</b> со своим числовым Telegram ID (или одну переменную <b>ADMIN_TELEGRAM_ID</b>).</p>` : ''}
+              ${state.telegramId ? `<p class="muted" style="margin-top:12px;font-size:12px;line-height:1.4;">Вкладка «Админ»: ваш Telegram ID должен совпадать с <b>ADMIN_CHAT_ID</b> (если заявки приходят вам в личку боту — это тот же числовой id), либо задайте <b>ADMIN_TELEGRAM_IDS</b> / <b>ADMIN_TELEGRAM_ID</b>.</p>` : ''}
             </div>
           </section>`;
         }
@@ -1996,7 +2004,7 @@
         if (product) addToCart(product);
       }
       if (action === 'qty-minus') {
-        changeQty(id, -1);
+        changeQty(id, -5);
       }
       if (action === 'qty-plus') {
         changeQty(id, 5);
