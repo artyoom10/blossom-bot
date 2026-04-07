@@ -277,6 +277,17 @@ def build_items_summary(items: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def totals_from_items(items: List[Dict[str, Any]]) -> Tuple[float, int]:
+    total_amount = 0.0
+    total_stems = 0
+    for item in items:
+        qty = int(item.get("qty") or item.get("quantity") or 0)
+        price = parse_rub_price(item.get("price"))
+        total_amount += qty * price
+        total_stems += qty
+    return round(total_amount, 2), total_stems
+
+
 def build_items_summary_plain(items: List[Dict[str, Any]]) -> str:
     lines = []
     for item in items:
@@ -700,6 +711,30 @@ def api_feedback():
     return jsonify({"ok": True})
 
 
+def load_all_requests_admin(*, limit: int = 300) -> List[Dict[str, Any]]:
+    r = supabase_get(
+        REQUESTS_TABLE,
+        {
+            "select": REQUESTS_SELECT_FULL,
+            "order": "created_at.desc",
+            "limit": limit,
+        },
+    )
+    if r.ok:
+        return r.json() or []
+    r2 = supabase_get(
+        REQUESTS_TABLE,
+        {
+            "select": REQUESTS_SELECT_BASIC,
+            "order": "created_at.desc",
+            "limit": limit,
+        },
+    )
+    if not r2.ok:
+        raise RuntimeError(r2.text)
+    return r2.json() or []
+
+
 def load_requests_for_user(telegram_id: int | str) -> List[Dict[str, Any]]:
     r = supabase_get(
         REQUESTS_TABLE,
@@ -815,11 +850,15 @@ def api_order():
             f"Сумма: <b>{total_amount:.0f} ₽</b>\n\n"
             f"{build_items_summary(normalized_items)}"
         )
-        buttons = [[
-            {"text": "✅ Подтвердить", "callback_data": f"req:{created['id']}:approve"},
-            {"text": "❌ Отмена", "callback_data": f"req:{created['id']}:reject"},
-            {"text": "✏️ Изменить заявку", "callback_data": f"req:{created['id']}:edit"},
-        ]]
+        buttons = [
+            [
+                {"text": "✅ Подтвердить", "callback_data": f"req:{created['id']}:approve"},
+                {"text": "❌ Отмена", "callback_data": f"req:{created['id']}:reject"},
+            ],
+            [
+                {"text": "✏️ Изменить заявку", "callback_data": f"req:{created['id']}:edit"},
+            ],
+        ]
 
         message = tg_send_message(ADMIN_CHAT_ID, text, buttons) if ADMIN_CHAT_ID else None
         if message and message.get("result", {}).get("message_id"):
@@ -879,6 +918,109 @@ def api_cancel_request():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.get("/api/admin/requests")
+def api_admin_requests_list():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    try:
+        rows = load_all_requests_admin()
+        return jsonify({"ok": True, "requests": rows})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/request/revision-response")
+def api_revision_response():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    request_id = payload.get("request_id")
+    decision = (payload.get("decision") or "").strip().lower()
+    if not telegram_id or not request_id:
+        return jsonify({"ok": False, "error": "telegram_id and request_id are required"}), 400
+    if decision not in {"accept", "reject"}:
+        return jsonify({"ok": False, "error": "decision must be accept or reject"}), 400
+
+    try:
+        row = load_request_by_id(request_id)
+        if not row:
+            return jsonify({"ok": False, "error": "request_not_found"}), 404
+        if str(row.get("telegram_user_id")) != str(telegram_id):
+            return jsonify({"ok": False, "error": "forbidden"}), 403
+        if row.get("status") != "change_requested":
+            return jsonify({"ok": False, "error": "not_awaiting_client_response"}), 400
+
+        if decision == "accept":
+            patch_body: Dict[str, Any] = {
+                "status": "approved",
+                "previous_items": None,
+                "manager_note": None,
+                "updated_at": now_iso(),
+            }
+        else:
+            prev = row.get("previous_items") or []
+            if not prev:
+                return jsonify({"ok": False, "error": "no_previous_items"}), 400
+            total_amount, total_stems = totals_from_items(prev)
+            patch_body = {
+                "items": prev,
+                "previous_items": None,
+                "manager_note": None,
+                "status": "new",
+                "total_amount": total_amount,
+                "total_stems": total_stems,
+                "updated_at": now_iso(),
+            }
+
+        upd = supabase_patch(
+            REQUESTS_TABLE,
+            patch_body,
+            params={"id": f"eq.{request_id}"},
+            prefer_return=True,
+        )
+        if not upd.ok:
+            return jsonify({"ok": False, "error": upd.text}), 500
+        updated = (upd.json() or [row])[0]
+
+        salon_label = html.escape(str(updated.get("salon_name") or "Салон"))
+        if decision == "accept":
+            if ADMIN_CHAT_ID:
+                tg_send_message(
+                    ADMIN_CHAT_ID,
+                    f"✅ Клиент <b>принял</b> правки по заявке #{request_id}.\nСалон: <b>{salon_label}</b>\n"
+                    f"Итого: <b>{float(updated.get('total_amount') or 0):.0f} ₽</b>, "
+                    f"стеблей: <b>{int(updated.get('total_stems') or 0)}</b>",
+                )
+            tg_send_message(
+                telegram_id,
+                "✅ <b>Вы приняли изменения.</b>\n"
+                f"Заявка <b>#{html.escape(str(request_id))}</b> подтверждена с новым составом.",
+            )
+        else:
+            if ADMIN_CHAT_ID:
+                tg_send_message(
+                    ADMIN_CHAT_ID,
+                    f"↩️ Клиент <b>отклонил</b> правки по заявке #{request_id}. Восстановлен прежний состав.\n"
+                    f"Салон: <b>{salon_label}</b>",
+                )
+            tg_send_message(
+                telegram_id,
+                "↩️ <b>Изменения отклонены.</b>\n"
+                f"Заявка <b>#{html.escape(str(request_id))}</b> снова на рассмотрении в прежнем виде.",
+            )
+
+        return jsonify({"ok": True, "request": updated})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.post("/webhook")
 def webhook():
     payload = request.get_json(silent=True) or {}
@@ -920,6 +1062,14 @@ def webhook():
             if callback_id:
                 tg_answer_callback(callback_id, "Откройте редактор в мини-приложении")
             web_url = f"{MINIAPP_BASE_URL.rstrip('/')}/miniapp#adminReq={raw_request_id}"
+            client_tg = request_row.get("telegram_user_id")
+            if client_tg:
+                tg_send_message(
+                    client_tg,
+                    "✏️ <b>Менеджер открыл заявку для правок.</b>\n"
+                    f"Заявка <b>#{html.escape(str(raw_request_id))}</b> — скорее всего вам пришлют обновлённый состав. "
+                    "Откройте мини-приложение: там можно будет <b>принять</b> или <b>отклонить</b> изменения.",
+                )
             if ADMIN_CHAT_ID:
                 tg_send_message(
                     ADMIN_CHAT_ID,
