@@ -15,7 +15,6 @@ app = Flask(__name__)
 
 BOT_TOKEN = os.getenv("BLOSSOM_BOT_TOKEN", "")
 ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID", "")
-MINIAPP_BASE_URL = os.getenv("MINIAPP_BASE_URL", "").rstrip("/")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY", "")
 FLOWERS_PUBLIC_BASE = os.getenv(
@@ -42,7 +41,37 @@ app.config["JSON_AS_ASCII"] = False
 
 def admin_telegram_ids() -> Set[str]:
     raw = os.getenv("ADMIN_TELEGRAM_IDS", "")
-    return {x.strip() for x in raw.split(",") if x.strip()}
+    ids = {x.strip() for x in raw.split(",") if x.strip()}
+    one = os.getenv("ADMIN_TELEGRAM_ID", "").strip()
+    if one:
+        ids.add(one)
+    return ids
+
+
+def public_miniapp_base_url() -> str:
+    """Явный URL из env (приоритет)."""
+    for key in ("MINIAPP_BASE_URL", "RENDER_EXTERNAL_URL", "PUBLIC_BASE_URL"):
+        v = os.getenv(key, "").strip().rstrip("/")
+        if v:
+            return v
+    return ""
+
+
+def miniapp_base_url_for_request() -> str:
+    """
+    URL сервиса для ссылок Web App. Сначала env, иначе Host из входящего HTTP-запроса
+    (webhook Telegram к Render передаёт Host — можно не задавать MINIAPP_BASE_URL).
+    """
+    b = public_miniapp_base_url()
+    if b:
+        return b
+    host = (request.headers.get("Host") or "").split(",")[0].strip()
+    if not host or "localhost" in host.lower():
+        return ""
+    proto = (request.headers.get("X-Forwarded-Proto") or request.scheme or "https").split(",")[0].strip()
+    if proto not in ("http", "https"):
+        proto = "https"
+    return f"{proto}://{host}".rstrip("/")
 
 
 # -------------------- helpers --------------------
@@ -1055,13 +1084,18 @@ def webhook():
             return jsonify({"ok": True})
 
         if action == "edit":
-            if not MINIAPP_BASE_URL:
+            base = miniapp_base_url_for_request()
+            if not base:
                 if callback_id:
-                    tg_answer_callback(callback_id, "Задайте MINIAPP_BASE_URL на сервере")
+                    tg_answer_callback(
+                        callback_id,
+                        "Не удалось собрать ссылку на приложение. Укажите MINIAPP_BASE_URL "
+                        "(https://ваш-сервис.onrender.com) в переменных окружения.",
+                    )
                 return jsonify({"ok": True})
             if callback_id:
                 tg_answer_callback(callback_id, "Откройте редактор в мини-приложении")
-            web_url = f"{MINIAPP_BASE_URL.rstrip('/')}/miniapp#adminReq={raw_request_id}"
+            web_url = f"{base}/miniapp#adminReq={raw_request_id}"
             client_tg = request_row.get("telegram_user_id")
             if client_tg:
                 tg_send_message(
