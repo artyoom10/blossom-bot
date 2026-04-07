@@ -638,6 +638,108 @@
       fill: currentColor;
     }
 
+    .admin-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .admin-toolbar label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .admin-toolbar select {
+      flex: 1;
+      min-width: 160px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font: inherit;
+      font-weight: 600;
+      background: var(--surface-soft);
+    }
+    .admin-stats-line {
+      width: 100%;
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0;
+    }
+    .admin-day-block {
+      margin-top: 20px;
+    }
+    .admin-day-block:first-of-type { margin-top: 8px; }
+    .admin-day-title {
+      margin: 0 0 12px;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--primary-soft);
+    }
+    .admin-salon-block {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--surface-soft);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+    }
+    .admin-salon-title {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .admin-salon-meta {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .admin-req-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin-top: 10px;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 2px 8px rgba(18,24,32,.04);
+    }
+    .admin-req-card.status-new { border-left-color: #2d9d78; }
+    .admin-req-card.status-change_requested { border-left-color: #d97706; }
+    .admin-req-card.status-approved { border-left-color: #15803d; }
+    .admin-req-card.status-rejected,
+    .admin-req-card.status-cancelled_by_client { border-left-color: #9ca3af; }
+    .admin-req-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .admin-req-time {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .admin-req-lines {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
     .admin-seg {
       display: flex;
       gap: 8px;
@@ -898,6 +1000,7 @@
       loadingAdmin: false,
       adminEditor: null,
       orderSuccessVisible: false,
+      adminSalonFilter: 'all',
     };
 
     /** В JSON как строка, чтобы не терять точность у длинных Telegram id. */
@@ -1698,15 +1801,15 @@
               </div>
               ${item.status === 'change_requested' && (item.previous_items || []).length ? `
                 <div class="revision-banner" style="margin-top:12px;">
-                  <b>Менеджер внёс изменения.</b> Примите новый состав или верните прежний вариант.
+                  <b>Менеджер внёс изменения.</b> Примите новый состав или отклоните заявку целиком.
                   ${item.manager_note ? `<div style="margin-top:8px;">${escapeHtml(item.manager_note)}</div>` : ''}
                 </div>
                 <div class="revision-actions">
                   <button class="btn" type="button" data-action="revision-accept" data-id="${item.id}">Принять изменения</button>
-                  <button class="btn-outline" type="button" data-action="revision-reject" data-id="${item.id}">Отклонить, оставить как было</button>
+                  <button class="btn-outline" type="button" style="border-color:#fecaca;color:var(--danger);" data-action="cancel-request" data-id="${item.id}">Отклонить заявку</button>
                 </div>
               ` : ''}
-              ${(item.status === 'new' || item.status === 'change_requested') ? `
+              ${item.status === 'new' ? `
                 <div class="actions" style="margin-top:14px;">
                   <button class="btn-outline" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
                 </div>
@@ -1785,6 +1888,95 @@
       `;
     }
 
+    function formatAdminDayLabel(dayKey) {
+      if (!dayKey || dayKey === 'unknown') return 'Без даты';
+      const d = new Date(`${dayKey}T12:00:00.000Z`);
+      return d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function formatAdminTime(iso) {
+      if (!iso) return '';
+      try {
+        return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function filterAdminRequestsBySalon(requests, salonFilter) {
+      if (!salonFilter || salonFilter === 'all') return [...requests];
+      return requests.filter((r) => ((r.salon_name || '').trim() || '—') === salonFilter);
+    }
+
+    function adminSalonFilterOptions(requests) {
+      const set = new Set();
+      requests.forEach((r) => set.add(((r.salon_name || '').trim() || '—')));
+      return [...set].sort((a, b) => a.localeCompare(b, 'ru'));
+    }
+
+    function buildAdminRequestBoard(requests) {
+      const list = [...requests].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      const byDate = new Map();
+      for (const r of list) {
+        let dayKey = 'unknown';
+        if (r.created_at) {
+          try {
+            dayKey = new Date(r.created_at).toISOString().slice(0, 10);
+          } catch (_) {}
+        }
+        if (!byDate.has(dayKey)) byDate.set(dayKey, []);
+        byDate.get(dayKey).push(r);
+      }
+      const dates = [...byDate.keys()].sort((a, b) => {
+        if (a === 'unknown') return 1;
+        if (b === 'unknown') return -1;
+        return b.localeCompare(a);
+      });
+      return dates.map((dayKey) => {
+        const rows = byDate.get(dayKey);
+        const bySalon = new Map();
+        for (const r of rows) {
+          const sn = (r.salon_name || '').trim() || '—';
+          if (!bySalon.has(sn)) bySalon.set(sn, []);
+          bySalon.get(sn).push(r);
+        }
+        const salons = [...bySalon.keys()].sort((a, b) => a.localeCompare(b, 'ru'));
+        return {
+          dayKey,
+          dayLabel: formatAdminDayLabel(dayKey),
+          salons: salons.map((name) => ({
+            name,
+            requests: bySalon.get(name).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
+          })),
+        };
+      });
+    }
+
+    function renderAdminRequestCard(item) {
+      const st = item.status || '';
+      const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
+      return `
+        <article class="admin-req-card status-${stCls}">
+          <div class="admin-req-top">
+            <div>
+              <div class="product-name">#${item.id}</div>
+              <div class="muted" style="margin-top:2px;font-size:12px;">${money(item.total_amount || 0)} · ${item.total_stems || 0} ст.</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st))}</span>
+              <div class="admin-req-time">${formatAdminTime(item.created_at)}</div>
+            </div>
+          </div>
+          <div class="admin-req-lines">
+            ${(item.items || []).map((row) => `• ${escapeHtml(row.name)} — ${row.qty} шт`).join('<br/>')}
+          </div>
+          ${(item.status === 'new' || item.status === 'change_requested') ? `
+            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Редактировать заявку</button>
+          ` : ''}
+        </article>
+      `;
+    }
+
     function renderAdminEditorModal() {
       if (!state.adminEditor) return '';
       const ed = state.adminEditor;
@@ -1855,28 +2047,42 @@
           </section>
         `;
       }
+      const filtered = filterAdminRequestsBySalon(state.adminRequests, state.adminSalonFilter);
+      const board = buildAdminRequestBoard(filtered);
+      const salonOpts = adminSalonFilterOptions(state.adminRequests);
       return `
         <section class="stack">
           ${seg}
           ${state.loadingAdmin ? `<div class="empty">Загрузка…</div>` : ''}
           ${!state.loadingAdmin && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
-          ${state.adminRequests.map((item) => `
-            <article class="request-card">
-              <div class="request-head">
-                <div style="min-width:0;">
-                  <div class="product-name">#${item.id} · ${escapeHtml(item.salon_name || '—')}</div>
-                  <div class="muted" style="margin-top:4px;">Стеблей: ${item.total_stems || 0} · ${money(item.total_amount || 0)}</div>
-                </div>
-                <span class="request-status ${item.status}">${escapeHtml(requestStatusLabel(item.status))}</span>
+          ${!state.loadingAdmin && state.adminRequests.length ? `
+            <div class="admin-toolbar">
+              <label for="admin-salon-filter">Салон</label>
+              <select id="admin-salon-filter" data-action="admin-filter-salon" class="admin-filter-select" aria-label="Фильтр по салону">
+                <option value="all" ${state.adminSalonFilter === 'all' ? 'selected' : ''}>Все салоны</option>
+                ${salonOpts.map((s) => {
+                  const enc = encodeURIComponent(s);
+                  return `<option value="${enc}" ${state.adminSalonFilter === s ? 'selected' : ''}>${escapeHtml(s)}</option>`;
+                }).join('')}
+              </select>
+              <p class="admin-stats-line">Показано: <b>${filtered.length}</b> из ${state.adminRequests.length} · сгруппировано по дате и салону</p>
+            </div>
+            ${!filtered.length ? `<div class="empty">Нет заявок для выбранного салона.</div>` : ''}
+            ${board.map((day) => `
+              <div class="admin-day-block">
+                <h3 class="admin-day-title">${escapeHtml(day.dayLabel)}</h3>
+                ${day.salons.map((salon) => `
+                  <div class="admin-salon-block">
+                    <div class="admin-salon-title">
+                      <span>${escapeHtml(salon.name)}</span>
+                      <span class="admin-salon-meta">${salon.requests.length} заяв.</span>
+                    </div>
+                    ${salon.requests.map((item) => renderAdminRequestCard(item)).join('')}
+                  </div>
+                `).join('')}
               </div>
-              <div class="stack" style="gap:8px; margin-top:12px;">
-                ${(item.items || []).map((row) => `<div class="muted">• ${escapeHtml(row.name)} — ${row.qty} шт</div>`).join('')}
-              </div>
-              ${(item.status === 'new' || item.status === 'change_requested') ? `
-                <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Редактировать заявку</button>
-              ` : ''}
-            </article>
-          `).join('')}
+            `).join('')}
+          ` : ''}
         </section>
       `;
     }
@@ -1953,6 +2159,12 @@
 
     document.addEventListener('change', (event) => {
       const t = event.target;
+      if (t && t.matches && t.matches('[data-action="admin-filter-salon"]')) {
+        const v = t.value;
+        state.adminSalonFilter = v === 'all' ? 'all' : decodeURIComponent(v);
+        render();
+        return;
+      }
       if (t && t.matches && t.matches('[data-admin-flower-vis]')) {
         const fid = Number(t.dataset.id);
         const f = state.adminFlowers.find((x) => x.id === fid);
@@ -2046,9 +2258,6 @@
       }
       if (action === 'revision-accept') {
         await revisionRespond(Number(id), 'accept');
-      }
-      if (action === 'revision-reject') {
-        await revisionRespond(Number(id), 'reject');
       }
     });
 
