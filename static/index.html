@@ -33,6 +33,58 @@
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     button { font: inherit; }
+    button,
+    [role="button"],
+    .btn,
+    .btn-outline,
+    .soft-btn,
+    .nav-btn,
+    .icon-btn,
+    .category-card,
+    .checkout-edit-date-btn,
+    input[type="button"],
+    input[type="submit"] {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .btn:focus,
+    .btn-outline:focus,
+    .nav-btn:focus,
+    .soft-btn:focus,
+    .icon-btn:focus {
+      outline: none;
+    }
+    .btn:focus-visible,
+    .btn-outline:focus-visible {
+      box-shadow: 0 0 0 2px rgba(31, 122, 91, 0.35);
+    }
+
+    .page-refresh-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(246, 247, 248, 0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .page-refresh-overlay__card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 22px 26px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid rgba(228, 232, 237, 0.9);
+      box-shadow: var(--shadow);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
 
     .app {
       max-width: 430px;
@@ -342,6 +394,17 @@
     .cart-row {
       display: flex;
       gap: 12px;
+      align-items: flex-start;
+    }
+    .cart-item-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .cart-item-body .product-top {
+      width: 100%;
     }
     .cart-thumb {
       width: 68px;
@@ -650,6 +713,11 @@
       gap: 6px;
       flex-wrap: wrap;
     }
+    .profile-name-row .product-name {
+      display: inline-flex;
+      align-items: center;
+      line-height: 1.25;
+    }
     .verified-badge {
       display: inline-flex;
       align-items: center;
@@ -660,6 +728,7 @@
       background: #3b82f6;
       color: white;
       flex-shrink: 0;
+      align-self: center;
     }
     .verified-badge svg {
       width: 11px;
@@ -759,10 +828,16 @@
       color: var(--primary);
     }
     .nav-icon { font-size: 18px; display: flex; align-items: center; justify-content: center; }
-    .nav-badge {
+    .nav-icon-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-icon-wrap .nav-badge {
       position: absolute;
-      top: 6px;
-      right: 14px;
+      top: -5px;
+      right: -9px;
       min-width: 18px;
       height: 18px;
       padding: 0 5px;
@@ -773,6 +848,9 @@
       background: var(--primary);
       color: white;
       font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      border: 2px solid rgba(255, 255, 255, 0.95);
     }
 
     .toast {
@@ -952,46 +1030,8 @@
       opacity: 0.65;
       cursor: not-allowed;
     }
-    .cart-fab {
-      position: fixed;
-      right: max(14px, env(safe-area-inset-right));
-      bottom: calc(68px + max(8px, env(safe-area-inset-bottom)));
-      z-index: 40;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      border: 0;
-      background: var(--primary);
-      color: white;
-      box-shadow: 0 10px 28px rgba(31, 122, 91, 0.35);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-    .cart-fab .nav-icon-svg {
-      width: 26px;
-      height: 26px;
-    }
     .cart-screen--has-checkout {
       padding-bottom: 88px;
-    }
-    .cart-fab-badge {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      min-width: 18px;
-      height: 18px;
-      padding: 0 5px;
-      border-radius: 999px;
-      background: #fff;
-      color: var(--primary);
-      font-size: 11px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
     }
     .admin-req-card-top {
       display: flex;
@@ -1916,8 +1956,11 @@
       salon: null,
       meMessage: '',
       loadingProducts: false,
+      /** Полноэкранный оверлей при явном обновлении каталога (не silent) */
+      catalogRefreshBlocking: false,
       loadingProfile: true,
       loadingRequests: false,
+      requestsRefreshBlocking: false,
       apiError: '',
       notice: '',
       telegramId: tgUser?.id || urlParams.get('tg_id') || null,
@@ -1943,6 +1986,8 @@
       pendingNotice: '',
       /** Админ: раскрытая заявка id → true */
       adminExpandedRequestIds: {},
+      /** Клиент: раскрытая заявка id → true */
+      clientExpandedRequestIds: {},
     };
 
     let lastOverlaySyncKey = '\x00';
@@ -2088,9 +2133,15 @@
       const salon = state.salon;
       const cn = salon && salon.contact_name != null ? String(salon.contact_name).trim() : '';
       if (cn) return cn;
-      if (state.telegramName && state.telegramName !== 'Гость') return String(state.telegramName).trim();
       if (salon && salon.name) return String(salon.name).trim();
+      if (state.telegramName && state.telegramName !== 'Гость') return String(state.telegramName).trim();
       return 'коллега';
+    }
+
+    function setBootSplashPlaceholder() {
+      const titleEl = document.querySelector('.boot-splash__title');
+      if (!titleEl) return;
+      titleEl.textContent = `${splashGreetingWord()}, …`;
     }
 
     function updateBootSplashGreeting() {
@@ -2098,7 +2149,18 @@
       if (!titleEl) return;
       titleEl.textContent = `${splashGreetingWord()}, ${splashDisplayName()}`;
     }
-    updateBootSplashGreeting();
+    setBootSplashPlaceholder();
+
+    function renderPageRefreshOverlay(text) {
+      return `
+        <div class="page-refresh-overlay" role="status" aria-live="polite">
+          <div class="page-refresh-overlay__card">
+            <div class="action-overlay-spinner" style="width:36px;height:36px;border-width:2px;"></div>
+            <span>${escapeHtml(text)}</span>
+          </div>
+        </div>
+      `;
+    }
 
     /** Остаток: свободно + зарезервировано в заявках (серый замок). */
     function productStockLine(item) {
@@ -2151,16 +2213,6 @@
         const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(q > 0 ? q : '');
         inp.value = displayVal;
       });
-    }
-
-    function renderCartFab() {
-      if (state.isAdmin || !canSalonOrder()) return '';
-      return `
-        <button type="button" class="cart-fab" data-action="tab" data-tab="cart" aria-label="Корзина">
-          ${iconNav.cart}
-          ${cartCount() > 0 ? `<span class="cart-fab-badge">${cartCount()}</span>` : ''}
-        </button>
-      `;
     }
 
     function requestStatusLabel(status, forAdmin) {
@@ -2707,6 +2759,7 @@
     async function loadProducts(silent = false) {
       if (!silent) {
         state.loadingProducts = true;
+        state.catalogRefreshBlocking = true;
         render();
       }
       try {
@@ -2718,6 +2771,7 @@
         state.apiError = err.message || 'Не удалось загрузить каталог';
       } finally {
         state.loadingProducts = false;
+        state.catalogRefreshBlocking = false;
         render();
       }
     }
@@ -2726,6 +2780,7 @@
       if (!state.telegramId) return;
       if (!silent) {
         state.loadingRequests = true;
+        state.requestsRefreshBlocking = true;
         render();
       }
       try {
@@ -2738,6 +2793,7 @@
         if (!silent) state.requests = [];
       } finally {
         state.loadingRequests = false;
+        state.requestsRefreshBlocking = false;
         render();
       }
     }
@@ -3002,6 +3058,9 @@
     }
 
     function renderHome() {
+      if (state.catalogRefreshBlocking) {
+        return renderPageRefreshOverlay('Обновляем каталог…');
+      }
       const list = filteredProducts();
       return `
         ${renderCategories()}
@@ -3010,11 +3069,6 @@
             <h3 class="section-title">Каталог</h3>
             <button class="soft-btn" type="button" data-action="reload-catalog">Обновить</button>
           </div>
-          ${state.loadingProducts ? `
-          <div class="catalog-loading-banner">
-            <div class="action-overlay-spinner" style="width:28px;height:28px;margin:0 12px 0 0;border-width:2px;"></div>
-            <span>Обновляем каталог…</span>
-          </div>` : ''}
           <div class="stack">
             ${!state.loadingProducts && !list.length ? `<div class="empty">В каталоге пока нет позиций.</div>` : ''}
             ${list.map((item) => renderProductCard(item)).join('')}
@@ -3124,7 +3178,7 @@
                 <article class="card cart-item">
                   <div class="cart-row">
                     <img class="cart-thumb" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" data-action="open-product" data-id="${item.id}" />
-                    <div style="min-width:0; flex:1;">
+                    <div class="cart-item-body">
                       <div class="product-top">
                         <div>
                           <h3 class="product-name">${escapeHtml(item.name)}</h3>
@@ -3197,15 +3251,13 @@
       `;
     }
 
-    function buildClientRequestCardInner(item) {
-      const st = item.status || '';
+    function buildClientRequestDetailsInner(item) {
       const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
       const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
       const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
       const dWeek = dIso ? weekdayFullRu(dIso) : '';
-
-      const statusBlock = st && st !== 'new'
-        ? `<div class="request-mini-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</div>`
+      const createdLine = item.created_at
+        ? `<div class="admin-created-line muted">Создана: ${escapeHtml(formatAdminShortDate(item.created_at))} · ${escapeHtml(formatAdminTime(item.created_at))}</div>`
         : '';
 
       const clientRevision = item.status === 'change_requested' && (item.previous_items || []).length
@@ -3230,11 +3282,7 @@
         : '';
 
       return `
-              <div class="request-card-headline">
-                <span class="request-id">Заявка #${item.id}</span>
-                <span class="request-time">${formatAdminTime(item.created_at)}</span>
-              </div>
-              ${statusBlock}
+              ${createdLine}
               <div class="request-stat-strip">
                 <div class="request-stat-cell">
                   <span class="request-stat-label">Стеблей</span>
@@ -3324,22 +3372,22 @@
     }
 
     function renderRequests() {
+      if (state.requestsRefreshBlocking) {
+        return `<section class="stack">${renderPageRefreshOverlay('Обновляем заявки…')}</section>`;
+      }
+      const board = buildClientRequestBoard(state.requests);
       return `
         <section class="stack">
           <div class="section-head">
             <h2 class="section-title">Мои заявки</h2>
             <button class="soft-btn" data-action="reload-requests">Обновить</button>
           </div>
-          ${state.loadingRequests ? `
-          <div class="catalog-loading-banner">
-            <div class="action-overlay-spinner" style="width:28px;height:28px;margin:0 12px 0 0;border-width:2px;"></div>
-            <span>Обновляем заявки…</span>
-          </div>` : ''}
-          ${!state.loadingRequests && !state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
-          ${state.requests.map((item) => `
-            <article class="request-card">
-              ${buildClientRequestCardInner(item)}
-            </article>
+          ${!state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
+          ${board.map((day) => `
+            <div class="admin-day-block">
+              <h3 class="admin-day-title">${escapeHtml(day.dayLabel)}</h3>
+              ${day.requests.map((item) => renderClientRequestCard(item)).join('')}
+            </div>
           `).join('')}
         </section>
       `;
@@ -3502,6 +3550,62 @@
           })),
         };
       });
+    }
+
+    function buildClientRequestBoard(requests) {
+      const list = [...requests].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      const byDate = new Map();
+      for (const r of list) {
+        let dayKey = 'unknown';
+        const raw = r.delivery_date;
+        if (raw) {
+          try {
+            dayKey = String(raw).slice(0, 10);
+            if (dayKey.length < 10) dayKey = 'unknown';
+          } catch (_) {}
+        }
+        if (!byDate.has(dayKey)) byDate.set(dayKey, []);
+        byDate.get(dayKey).push(r);
+      }
+      const dates = [...byDate.keys()].sort((a, b) => {
+        if (a === 'unknown') return 1;
+        if (b === 'unknown') return -1;
+        return b.localeCompare(a);
+      });
+      return dates.map((dayKey) => ({
+        dayKey,
+        dayLabel: formatAdminDayLabel(dayKey),
+        requests: byDate.get(dayKey).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)),
+      }));
+    }
+
+    function renderClientRequestCard(item) {
+      const st = item.status || '';
+      const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
+      const expanded = !!state.clientExpandedRequestIds[item.id];
+      return `
+        <article class="request-card admin-request-card client-request-card status-${stCls}">
+          <div class="admin-req-card-top">
+            <button type="button" class="admin-req-summary-btn" data-action="client-toggle-req" data-id="${item.id}">
+              <div class="admin-req-summary-row">
+                <span class="admin-req-id">Заявка #${item.id}</span>
+                <div class="admin-req-summary-trail">
+                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</span>
+                  <span class="admin-req-chevron-wrap${expanded ? ' is-open' : ''}" aria-hidden="true">${chevronDownSvg}</span>
+                </div>
+              </div>
+              <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
+            </button>
+          </div>
+          <div class="admin-req-details-outer${expanded ? ' is-open' : ''}">
+            <div class="admin-req-details-inner">
+              <div class="admin-req-details">
+                ${buildClientRequestDetailsInner(item)}
+              </div>
+            </div>
+          </div>
+        </article>
+      `;
     }
 
     function renderAdminRequestCard(item) {
@@ -3722,28 +3826,46 @@
     }
 
     function renderNav() {
-      const tabs = state.isAdmin
-        ? [
-            ['home', iconNav.home, 'Каталог'],
-            ['orders', iconNav.orders, 'Заявки'],
-            ['profile', iconNav.person, 'Профиль'],
-            ['admin', iconNav.admin, 'Админ'],
-          ]
-        : [
-            ['home', iconNav.home, 'Каталог'],
-            ['orders', iconNav.orders, 'Заявки'],
-            ['profile', iconNav.person, 'Профиль'],
-          ];
-      const gridClass = state.isAdmin ? 'nav-grid cols-4' : 'nav-grid cols-3';
-      return `
+      const n = cartCount();
+      if (state.isAdmin) {
+        const tabs = [
+          ['home', iconNav.home, 'Каталог'],
+          ['orders', iconNav.orders, 'Заявки'],
+          ['profile', iconNav.person, 'Профиль'],
+          ['admin', iconNav.admin, 'Админ'],
+        ];
+        return `
         <nav class="bottom-nav">
-          <div class="${gridClass}">
+          <div class="nav-grid cols-4">
             ${tabs.map(([tab, iconHtml, label]) => `
               <button class="nav-btn ${state.activeTab === tab ? 'active' : ''}" data-action="tab" data-tab="${tab}" type="button">
                 <span class="nav-icon">${iconHtml}</span>
                 <span>${label}</span>
               </button>
             `).join('')}
+          </div>
+        </nav>
+      `;
+      }
+      const tabs = [
+        ['home', iconNav.home, 'Каталог'],
+        ['orders', iconNav.orders, 'Заявки'],
+        ['profile', iconNav.person, 'Профиль'],
+        ['cart', iconNav.cart, 'Корзина'],
+      ];
+      return `
+        <nav class="bottom-nav">
+          <div class="nav-grid cols-4">
+            ${tabs.map(([tab, iconHtml, label]) => {
+              const iconInner = tab === 'cart' && n > 0
+                ? `<span class="nav-icon-wrap">${iconHtml}<span class="nav-badge">${n}</span></span>`
+                : iconHtml;
+              return `
+              <button class="nav-btn ${state.activeTab === tab ? 'active' : ''}" data-action="tab" data-tab="${tab}" type="button">
+                <span class="nav-icon">${iconInner}</span>
+                <span>${label}</span>
+              </button>`;
+            }).join('')}
           </div>
         </nav>
       `;
@@ -3787,7 +3909,6 @@
             ${screen}
           </main>
           ${renderNav()}
-          ${renderCartFab()}
           ${state.notice ? `<div class="toast">${escapeHtml(state.notice)}</div>` : ''}
         </div>
         ${renderAdminEditorModal()}
@@ -3896,6 +4017,12 @@
         const rid = Number(id);
         if (!Number.isFinite(rid)) return;
         state.adminExpandedRequestIds[rid] = !state.adminExpandedRequestIds[rid];
+        render();
+      }
+      if (action === 'client-toggle-req') {
+        const rid = Number(id);
+        if (!Number.isFinite(rid)) return;
+        state.clientExpandedRequestIds[rid] = !state.clientExpandedRequestIds[rid];
         render();
       }
       if (action === 'remove') {
@@ -4017,9 +4144,9 @@
       }, 5000);
       try {
         await loadProfile();
-        await loadProducts(false);
-        if (state.isAdmin) await loadAdminRequests(false);
-        else await loadRequests(false);
+        await loadProducts(true);
+        if (state.isAdmin) await loadAdminRequests(true);
+        else await loadRequests(true);
         const hm = /adminReq=(\d+)/.exec(window.location.hash || '');
         if (hm && state.isAdmin) await openAdminEditor(Number(hm[1]));
       } finally {
