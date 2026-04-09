@@ -2266,6 +2266,10 @@
         box-shadow: 0 0 0 14px rgba(45, 157, 120, 0);
       }
     }
+    .product-stock-inline {
+      display: inline;
+      line-height: 1.35;
+    }
     .stock-avail-num {
       font-size: 15px;
       font-weight: 800;
@@ -2274,28 +2278,39 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      margin-left: 6px;
-      padding: 2px 9px;
-      min-height: 26px;
+      gap: 2px;
+      margin-left: 4px;
+      padding: 0 5px;
+      min-height: 20px;
       border-radius: 999px;
       background: #eceff2;
-      color: #6c7380;
-      font-size: 15px;
-      font-weight: 800;
+      color: #5c6570;
+      font-size: 12px;
+      font-weight: 500;
       vertical-align: middle;
-      line-height: 1.15;
+      line-height: 1.2;
+      border: 1px solid rgba(92, 101, 112, 0.22);
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+    .stock-lock-btn.stock-lock-wrap {
+      -webkit-tap-highlight-color: transparent;
     }
     .stock-lock-wrap > span:last-child {
-      min-width: 0.65em;
+      min-width: 0.5em;
       text-align: center;
       font-variant-numeric: tabular-nums;
     }
     .stock-lock-icon {
-      width: 16px;
-      height: 16px;
-      opacity: .9;
+      width: 12px;
+      height: 12px;
+      opacity: 0.88;
       flex-shrink: 0;
+    }
+    .product-card.out .stock-lock-wrap {
+      background: #e8eaee;
+      color: #5a6169;
+      border-color: rgba(70, 78, 88, 0.38);
     }
     .action-overlay-error-icon {
       width: 52px;
@@ -2368,6 +2383,8 @@
       loadingAdminRequests: false,
       loadingAdminCatalog: false,
       adminEditor: null,
+      /** JSON.stringify(normalizeRevisionCompare(...)) при открытии редактора заявки */
+      adminEditorBaseline: null,
       /** { phase:'loading'|'success', variant, title?, sub?, loadingText? } | null */
       actionOverlay: null,
       adminSalonFilter: 'all',
@@ -2603,9 +2620,9 @@
       const avail = Number(item.stock ?? 0);
       const res = Number(item.reserved_pending ?? 0);
       const lock = res > 0
-        ? `<span class="stock-lock-wrap" title="В неподтверждённых заявках">${lockIconSvg}<span>${res}</span></span>`
+        ? `<button type="button" class="stock-lock-wrap stock-lock-btn" data-action="stock-lock-info" aria-label="Что означает замочек">${lockIconSvg}<span>${res}</span></button>`
         : '';
-      return `${stemPart}В наличии: <b class="stock-avail-num">${avail}</b>${lock}`;
+      return `<span class="product-stock-inline">${stemPart}В наличии: <b class="stock-avail-num">${avail}</b>${lock}</span>`;
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -2874,13 +2891,14 @@
       try {
         const rows = state.adminFlowers.map((f) => {
           const pr = f.price_rub;
-          const numPrice = pr === '' || pr == null ? null : Number(pr);
+          let numPrice = pr === '' || pr == null ? null : Number(String(pr).replace(',', '.'));
+          if (numPrice != null && !Number.isFinite(numPrice)) numPrice = null;
           const st = f.stems_count;
           const numStock = st === '' || st == null ? null : Number(st);
           return {
             id: f.id,
             catalog_visible: !!f.catalog_visible,
-            price_rub: numPrice != null && !Number.isNaN(numPrice) ? numPrice : null,
+            price_rub: numPrice,
             stems_count: numStock != null && !Number.isNaN(numStock) ? numStock : null,
           };
         });
@@ -2913,6 +2931,55 @@
       }
     }
 
+    function normalizeRevisionCompare(ed) {
+      if (!ed) return {};
+      return {
+        items: (ed.items || []).map((i) => ({
+          id: i.id,
+          qty: Number(i.qty) || 0,
+          price: String(i.price != null ? i.price : '').trim(),
+        })),
+        deliveryDate: (ed.deliveryDate || '').slice(0, 10),
+        comment: (ed.comment || '').trim(),
+      };
+    }
+
+    function isAdminRevisionDirty() {
+      if (!state.adminEditor || state.adminEditorBaseline == null) return false;
+      return JSON.stringify(normalizeRevisionCompare(state.adminEditor)) !== state.adminEditorBaseline;
+    }
+
+    function syncAdminEditorFromDom() {
+      const panel = document.querySelector('[data-admin-editor-root]');
+      if (!panel || !state.adminEditor) return;
+      const ed = state.adminEditor;
+      ed.items.forEach((line, idx) => {
+        const qEl = panel.querySelector(`[data-admin-revise-qty][data-idx="${idx}"]`);
+        const pEl = panel.querySelector(`[data-admin-revise-price][data-idx="${idx}"]`);
+        if (qEl) {
+          const qtyRaw = String(qEl.value ?? '').trim();
+          const qtyParsed = qtyRaw !== '' ? parseInt(qtyRaw.replace(/\D/g, ''), 10) : NaN;
+          line.qty = Number.isFinite(qtyParsed) ? qtyParsed : (Number(line.qty) || 0);
+        }
+        if (pEl) {
+          line.price = String(pEl.value ?? '').trim();
+        }
+      });
+      const dEl = panel.querySelector('[data-admin-revise-delivery]');
+      if (dEl) ed.deliveryDate = (dEl.value || '').slice(0, 10);
+      const ta = panel.querySelector('[data-admin-revise-comment]');
+      if (ta) ed.comment = ta.value;
+    }
+
+    function refreshAdminEditorSubmitState() {
+      if (!state.adminEditor) return;
+      syncAdminEditorFromDom();
+      const btn = document.querySelector('[data-action="admin-editor-save"]');
+      if (btn) {
+        btn.disabled = !isAdminRevisionDirty();
+      }
+    }
+
     async function openAdminEditor(requestId) {
       try {
         const res = await fetch(`/api/admin/request/${requestId}`, { headers: initDataHeaders() });
@@ -2931,6 +2998,7 @@
           comment: '',
           deliveryDate: dRaw,
         };
+        state.adminEditorBaseline = JSON.stringify(normalizeRevisionCompare(state.adminEditor));
         state.activeTab = 'orders';
         render();
       } catch (err) {
@@ -2940,39 +3008,29 @@
 
     async function submitAdminRevision() {
       if (!state.adminEditor) return;
+      syncAdminEditorFromDom();
+      if (!isAdminRevisionDirty()) {
+        showNotice('Нет изменений — измените состав, цену, дату или комментарий');
+        return;
+      }
+      const ed = state.adminEditor;
+      const items = ed.items
+        .map((line) => ({
+          id: line.id,
+          name: line.name,
+          qty: Number(line.qty) || 0,
+          price: line.price,
+        }))
+        .filter((i) => i.qty > 0);
+      const comment = (ed.comment || '').trim();
+      const deliveryDate = (ed.deliveryDate || '').trim().slice(0, 10);
+      if (!items.length) {
+        showNotice('Нужна хотя бы одна позиция с количеством');
+        return;
+      }
       window.clearTimeout(actionOverlayTimer);
       state.actionOverlay = { phase: 'loading', variant: 'admin-revise', loadingText: 'Отправляем правки…' };
       render();
-      const ed = state.adminEditor;
-      const panel = document.querySelector('.admin-modal-panel');
-      if (!panel) {
-        state.actionOverlay = null;
-        showNotice('Форма не найдена — откройте заявку снова');
-        render();
-        return;
-      }
-      const items = ed.items
-        .map((line, idx) => {
-          const qtyEl = panel.querySelector(`[data-admin-revise-qty][data-idx="${idx}"]`);
-          const prEl = panel.querySelector(`[data-admin-revise-price][data-idx="${idx}"]`);
-          const qtyRaw = qtyEl ? String(qtyEl.value ?? '').trim() : '';
-          const qtyParsed = qtyRaw !== '' ? parseInt(qtyRaw.replace(/\D/g, ''), 10) : NaN;
-          const qty = Number.isFinite(qtyParsed) ? qtyParsed : (Number(line.qty) || 0);
-          const priceRaw = prEl ? String(prEl.value ?? '').trim() : '';
-          const price = priceRaw !== '' ? priceRaw : line.price;
-          return { id: line.id, name: line.name, qty, price };
-        })
-        .filter((i) => i.qty > 0);
-      const ta = panel.querySelector('[data-admin-revise-comment]');
-      const comment = (ta && ta.value ? ta.value : '').trim();
-      const dEl = panel.querySelector('[data-admin-revise-delivery]');
-      const deliveryDate = (dEl && dEl.value ? dEl.value : ed.deliveryDate || '').trim().slice(0, 10);
-      if (!items.length) {
-        state.actionOverlay = null;
-        showNotice('Нужна хотя бы одна позиция с количеством');
-        render();
-        return;
-      }
       try {
         const [res] = await Promise.all([
           fetch(`/api/admin/request/${ed.id}/revise`, {
@@ -2985,6 +3043,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
         state.adminEditor = null;
+        state.adminEditorBaseline = null;
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
         await loadAdminRequests(true);
         await loadProducts(true);
@@ -4318,7 +4377,7 @@
       return `
         <div class="admin-modal">
           <button type="button" class="admin-modal-dismiss" data-action="admin-editor-close" aria-label="Закрыть"></button>
-          <div class="admin-modal-panel">
+          <div class="admin-modal-panel" data-admin-editor-root="1">
             <h3 class="section-title" style="margin:0;">Заявка #${ed.id}</h3>
             <p class="muted" style="margin-top:8px;line-height:1.45;">Измените количество и цену. Комментарий увидит клиент в приложении и в Telegram.</p>
             ${ed.items.map((line, idx) => `
@@ -4333,9 +4392,9 @@
             <label class="detail-label" style="display:block;margin-top:16px;">Дата поставки</label>
             <input type="date" data-admin-revise-delivery value="${escapeAttr(ed.deliveryDate || '')}" style="width:100%;margin-top:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
             <label class="detail-label" style="display:block;margin-top:16px;">Комментарий клиенту</label>
-            <textarea data-admin-revise-comment placeholder="Комментарий для клиента (по желанию)" style="width:100%;min-height:80px;margin-top:6px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+            <textarea data-admin-revise-comment placeholder="Комментарий для клиента (по желанию)" style="width:100%;min-height:80px;margin-top:6px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;">${escapeHtml(ed.comment || '')}</textarea>
             <div class="actions actions--single" style="margin-top:16px;">
-              <button class="btn" data-action="admin-editor-save" type="button">Отправить клиенту</button>
+              <button class="btn" data-action="admin-editor-save" type="button" disabled>Отправить клиенту</button>
               <button class="btn-outline" data-action="admin-editor-close" type="button" style="margin-top:10px;">Закрыть</button>
             </div>
           </div>
@@ -4609,6 +4668,9 @@
 
       updateTelegramButtons();
       syncGlobalOverlay();
+      if (state.adminEditor) {
+        window.requestAnimationFrame(() => refreshAdminEditorSubmitState());
+      }
     }
 
     document.addEventListener('change', (event) => {
@@ -4628,6 +4690,9 @@
         const fid = Number(t.dataset.id);
         const f = state.adminFlowers.find((x) => x.id === fid);
         if (f) f.catalog_visible = t.checked;
+      }
+      if (t && t.matches && t.matches('[data-admin-revise-delivery]')) {
+        refreshAdminEditorSubmitState();
       }
     });
     document.addEventListener('input', (event) => {
@@ -4653,6 +4718,9 @@
           const v = t.value.trim();
           f.stems_count = v === '' ? null : v;
         }
+      }
+      if (t && t.matches && t.matches('[data-admin-revise-qty], [data-admin-revise-price], [data-admin-revise-comment]')) {
+        refreshAdminEditorSubmitState();
       }
     });
 
@@ -4751,8 +4819,21 @@
       }
       if (action === 'admin-editor-close') {
         state.adminEditor = null;
+        state.adminEditorBaseline = null;
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
         render();
+      }
+      if (action === 'stock-lock-info') {
+        event.preventDefault();
+        event.stopPropagation();
+        const msg =
+          'Число у замочка — сколько стеблей этого цветка уже зарезервировано в заявках, которые ещё не подтверждены менеджером.';
+        try {
+          if (window.tg && typeof window.tg.showAlert === 'function') window.tg.showAlert(msg);
+          else showNotice(msg);
+        } catch (_) {
+          showNotice(msg);
+        }
       }
       if (action === 'admin-editor-save') {
         await submitAdminRevision();

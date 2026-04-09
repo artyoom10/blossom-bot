@@ -443,12 +443,15 @@ def flower_catalog_visible(flower: Dict[str, Any]) -> bool:
 
 
 def flower_effective_price(flower: Dict[str, Any]) -> float:
-    if flower.get("price_rub") is not None:
-        try:
-            return round(float(flower["price_rub"]), 2)
-        except (TypeError, ValueError):
-            pass
-    return parse_rub_price(flower.get("color"))
+    pr = flower.get("price_rub")
+    if pr is None:
+        return 0.0
+    if isinstance(pr, str) and not str(pr).strip():
+        return 0.0
+    try:
+        return round(float(pr), 2)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def flower_effective_stock(flower: Dict[str, Any]) -> int:
@@ -879,8 +882,12 @@ def api_admin_catalog_save():
             patch: Dict[str, Any] = {}
             if "catalog_visible" in row:
                 patch["catalog_visible"] = bool(row["catalog_visible"])
-            if "price_rub" in row and row["price_rub"] is not None:
-                patch["price_rub"] = round(float(row["price_rub"]), 2)
+            if "price_rub" in row:
+                v = row.get("price_rub")
+                if v is None or (isinstance(v, str) and not str(v).strip()):
+                    patch["price_rub"] = None
+                else:
+                    patch["price_rub"] = round(float(v), 2)
             if "stems_count" in row:
                 v = row["stems_count"]
                 if v is None or v == "":
