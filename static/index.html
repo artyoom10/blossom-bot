@@ -275,16 +275,32 @@
       color: var(--text);
     }
 
+    .product-hero-frame {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      margin: 0 0 6px;
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.14);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+    .product-hero-frame::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.07) 0%, transparent 45%);
+      pointer-events: none;
+      border-radius: inherit;
+    }
     .product-hero {
       width: 100%;
-      max-height: min(168px, 36vh);
+      max-height: min(200px, 42vh);
       height: auto;
       aspect-ratio: 4 / 3;
       object-fit: cover;
-      border-radius: 22px;
-      border: 1px solid var(--border);
+      border-radius: 0;
+      border: 0;
       background: #f1f3f5;
-      box-shadow: var(--shadow);
+      display: block;
     }
     .product-hero.out {
       filter: grayscale(1);
@@ -391,12 +407,6 @@
       white-space: normal;
       word-break: break-word;
     }
-    .admin-req-meta .request-status {
-      white-space: nowrap;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
     .request-status.new { background: #edf7f2; color: var(--primary); }
     .request-status.change_requested { background: #fff4e5; color: #b54708; }
     .request-status.approved { background: #eaf6ee; color: #137333; }
@@ -421,6 +431,38 @@
       font-weight: 700;
       color: var(--muted);
       white-space: nowrap;
+    }
+    .request-head-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .request-salon-line {
+      margin-top: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .request-status-badge-row {
+      margin-top: 8px;
+    }
+    .request-status-badge-row .request-status {
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
+      text-align: left;
+    }
+    .admin-request-card {
+      border-left: 4px solid var(--primary);
+    }
+    .admin-request-card.status-new { border-left-color: #2d9d78; }
+    .admin-request-card.status-change_requested { border-left-color: #d97706; }
+    .admin-request-card.status-approved { border-left-color: #15803d; }
+    .admin-request-card.status-rejected,
+    .admin-request-card.status-rejected_by_client,
+    .admin-request-card.status-cancelled_by_client { border-left-color: #dc2626; }
+    .request-card--pulse {
+      animation: admin-card-pulse 0.65s ease;
     }
     .request-stat-strip {
       display: flex;
@@ -746,7 +788,7 @@
       align-items: center;
       justify-content: center;
       background: linear-gradient(165deg, #e8f5ef 0%, #f5f0e8 45%, #eef6fb 100%);
-      transition: opacity .55s ease, visibility .55s ease;
+      transition: opacity .38s ease, visibility .38s ease;
     }
     .boot-splash--done {
       opacity: 0;
@@ -1195,7 +1237,7 @@
       padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.35s ease, visibility 0.35s ease;
+      transition: opacity 0.22s ease, visibility 0.22s ease;
       background: rgba(15, 23, 42, 0.48);
       -webkit-backdrop-filter: blur(6px);
       backdrop-filter: blur(6px);
@@ -1211,7 +1253,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: order-success-bg 0.35s ease;
+      animation: order-success-bg 0.22s ease;
     }
     @keyframes order-success-bg {
       from { opacity: 0; }
@@ -1241,7 +1283,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: order-success-pop 0.65s cubic-bezier(.34, 1.45, .64, 1) both;
+      animation: order-success-pop 0.42s cubic-bezier(.34, 1.45, .64, 1) both;
     }
     @keyframes order-success-pop {
       from { transform: scale(.35); opacity: 0; }
@@ -1254,12 +1296,12 @@
     .order-success-circle {
       stroke-dasharray: 151;
       stroke-dashoffset: 151;
-      animation: order-success-draw 0.55s ease forwards;
+      animation: order-success-draw 0.38s ease forwards;
     }
     .order-success-tick {
       stroke-dasharray: 48;
       stroke-dashoffset: 48;
-      animation: order-success-draw 0.4s 0.42s ease forwards;
+      animation: order-success-draw 0.28s 0.28s ease forwards;
     }
     @keyframes order-success-draw {
       to { stroke-dashoffset: 0; }
@@ -1284,7 +1326,7 @@
       border: 3px solid rgba(31, 122, 91, .2);
       border-top-color: var(--primary);
       border-radius: 50%;
-      animation: action-spin .75s linear infinite;
+      animation: action-spin .55s linear infinite;
     }
     @keyframes action-spin {
       to { transform: rotate(360deg); }
@@ -1369,7 +1411,7 @@
       position: relative;
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-end;
+      align-items: center;
       justify-content: space-between;
       gap: 12px;
       margin-top: 14px;
@@ -1618,7 +1660,7 @@
         <img class="boot-splash__logo" src="/miniapp/blossom_logo.png" width="96" height="96" alt="Blossom Flower Farm" />
       </div>
       <p class="boot-splash__brand">Blossom Flower Farm</p>
-      <h2 class="boot-splash__title">Загружаем сад</h2>
+      <h2 class="boot-splash__title">Blossom</h2>
       <p class="boot-splash__msg" id="boot-splash-msg">Связываемся с сервером…</p>
       <div class="boot-dots" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
@@ -1756,7 +1798,6 @@
         request_cannot_be_cancelled: 'Заявка уже обработана — обновите список.',
         request_not_deletable: 'Эту заявку нельзя удалить.',
         request_not_editable: 'Заявка уже обработана.',
-        comment_required: 'Нужен комментарий.',
       };
       return map[key] || key;
     }
@@ -1810,7 +1851,22 @@
       const el = document.getElementById('boot-splash');
       if (!el) return;
       el.classList.add('boot-splash--done');
-      window.setTimeout(() => el.remove(), 600);
+      window.setTimeout(() => el.remove(), 420);
+    }
+
+    function updateBootSplashGreeting() {
+      const titleEl = document.querySelector('.boot-splash__title');
+      if (!titleEl) return;
+      const salon = state.salon;
+      let nm = salon && (salon.contact_name || salon.name) ? String(salon.contact_name || salon.name).trim() : '';
+      if (!nm && state.telegramName && state.telegramName !== 'Гость') nm = String(state.telegramName).trim();
+      if (!nm) nm = 'коллега';
+      const h = new Date().getHours();
+      let g = 'Добрый вечер';
+      if (h >= 4 && h < 12) g = 'Доброе утро';
+      else if (h >= 12 && h < 24) g = 'Добрый вечер';
+      else g = 'Доброй ночи';
+      titleEl.textContent = `${g}, ${nm}`;
     }
 
     /** Остаток: свободно + зарезервировано в заявках (серый замок). */
@@ -1834,16 +1890,29 @@
       const qty = state.cart[id] || state.cart[idKey] || 0;
       if (qty <= 0 && state.qtyDraft[idKey] === undefined) return '';
       const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
-      const displayVal = state.qtyDraft[idKey] !== undefined ? state.qtyDraft[idKey] : String(qty > 0 ? qty : '');
       return `
         <div class="qty-stepper${extra}">
           <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 5" onmousedown="event.preventDefault()">−</button>
           <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-lpignore="true"
-            data-action="qty-input" data-id="${id}" value="${escapeAttr(displayVal)}" aria-label="Количество стеблей" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
+            data-action="qty-input" data-id="${id}" value="" aria-label="Количество стеблей" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
           <button type="button" class="icon-btn qty-step" data-action="qty-plus" data-id="${id}" aria-label="Добавить 5" onmousedown="event.preventDefault()">+</button>
           <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
         </div>
       `;
+    }
+
+    /** После render() подставляет value в поля количества из state (не трогает поле в фокусе — чтобы не сбивать ввод). */
+    function syncQtyInputsFromState(root) {
+      const scope = root || document.getElementById('app') || document;
+      if (!scope.querySelectorAll) return;
+      scope.querySelectorAll('[data-action="qty-input"]').forEach((inp) => {
+        const pid = inp.dataset.id;
+        if (pid == null) return;
+        const k = String(pid);
+        const qty = state.cart[pid] || state.cart[k] || 0;
+        const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(qty > 0 ? qty : '');
+        inp.value = displayVal;
+      });
     }
 
     function requestStatusLabel(status, forAdmin) {
@@ -2115,7 +2184,7 @@
             headers: initDataHeaders(),
             body: JSON.stringify({ items, comment, delivery_date: deliveryDate || undefined }),
           }),
-          sleep(800),
+          sleep(520),
         ]);
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
@@ -2131,7 +2200,7 @@
           sub: 'Клиент получит уведомление в Telegram',
         };
         render();
-        await sleep(3600);
+        await sleep(2400);
         state.actionOverlay = null;
         showNotice('Клиенту отправлены правки');
       } catch (err) {
@@ -2144,39 +2213,66 @@
     async function submitAdminReject(requestId) {
       const ta = document.querySelector('[data-reject-comment]');
       const comment = (ta && ta.value ? ta.value : '').trim();
-      if (comment.length < 2) {
-        showNotice('Укажите комментарий для клиента');
-        return;
-      }
+      state.rejectModal = null;
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = { phase: 'loading', variant: 'admin-reject', loadingText: 'Отменяем заявку…' };
+      render();
       try {
-        const res = await fetch(`/api/admin/request/${requestId}/reject`, {
-          method: 'POST',
-          headers: initDataHeaders(),
-          body: JSON.stringify({ comment }),
-        });
+        const [res] = await Promise.all([
+          fetch(`/api/admin/request/${requestId}/reject`, {
+            method: 'POST',
+            headers: initDataHeaders(),
+            body: JSON.stringify({ comment: comment || '' }),
+          }),
+          sleep(480),
+        ]);
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
-        state.rejectModal = null;
         await loadAdminRequests(true);
         await loadProducts(true);
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'admin-reject-ok',
+          title: 'Заявка отменена',
+          sub: 'Клиент уведомлён',
+        };
+        render();
+        await sleep(2200);
+        state.actionOverlay = null;
         showNotice('Заявка отменена, клиент уведомлён');
       } catch (err) {
-        showNotice(err.message || 'Не удалось отменить');
+        state.actionOverlay = null;
+        showNotice(translateApiError(err.message) || 'Не удалось отменить');
       }
       render();
     }
 
     async function adminApproveRequest(requestId) {
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = { phase: 'loading', variant: 'admin-approve', loadingText: 'Подтверждаем заявку…' };
+      render();
       try {
-        const res = await fetch(`/api/admin/request/${requestId}/approve`, {
-          method: 'POST',
-          headers: initDataHeaders(),
-        });
+        const [res] = await Promise.all([
+          fetch(`/api/admin/request/${requestId}/approve`, {
+            method: 'POST',
+            headers: initDataHeaders(),
+          }),
+          sleep(480),
+        ]);
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
         state.adminHighlightId = requestId;
         await loadAdminRequests(true);
         await loadProducts(true);
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'admin-approve-ok',
+          title: 'Заявка подтверждена',
+          sub: 'Клиент получит уведомление',
+        };
+        render();
+        await sleep(2200);
+        state.actionOverlay = null;
         showNotice('Заявка подтверждена');
         window.setTimeout(() => {
           state.adminHighlightId = null;
@@ -2184,6 +2280,7 @@
         }, 900);
       } catch (err) {
         state.adminHighlightId = null;
+        state.actionOverlay = null;
         showNotice(translateApiError(err.message) || 'Не удалось подтвердить');
       }
       render();
@@ -2202,16 +2299,32 @@
         }
       });
       if (!ok) return;
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = { phase: 'loading', variant: 'admin-delete', loadingText: 'Удаляем заявку…' };
+      render();
       try {
-        const res = await fetch(`/api/admin/request/${requestId}`, {
-          method: 'DELETE',
-          headers: initDataHeaders(),
-        });
+        const [res] = await Promise.all([
+          fetch(`/api/admin/request/${requestId}`, {
+            method: 'DELETE',
+            headers: initDataHeaders(),
+          }),
+          sleep(420),
+        ]);
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
         await loadAdminRequests(true);
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'admin-delete-ok',
+          title: 'Заявка удалена',
+          sub: '',
+        };
+        render();
+        await sleep(2000);
+        state.actionOverlay = null;
         showNotice('Заявка удалена');
       } catch (err) {
+        state.actionOverlay = null;
         showNotice(translateApiError(err.message) || 'Не удалось удалить');
       }
       render();
@@ -2225,8 +2338,8 @@
           <button type="button" class="admin-modal-dismiss" data-action="admin-reject-close" aria-label="Закрыть"></button>
           <div class="admin-modal-panel">
             <h3 class="section-title" style="margin:0;">Отмена заявки #${rid}</h3>
-            <p class="muted" style="margin-top:8px;line-height:1.45;">Комментарий увидит клиент в приложении и в Telegram.</p>
-            <textarea data-reject-comment placeholder="Причина отмены (обязательно)" style="width:100%;min-height:88px;margin-top:10px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+            <p class="muted" style="margin-top:8px;line-height:1.45;">По желанию укажите причину — клиент увидит её в приложении и в Telegram.</p>
+            <textarea data-reject-comment placeholder="Комментарий (необязательно)" style="width:100%;min-height:88px;margin-top:10px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
             <div class="actions actions--single" style="margin-top:16px;">
               <button class="btn" type="button" data-action="admin-reject-submit" data-id="${rid}" style="background:var(--danger);">Отменить заявку</button>
               <button class="btn-outline" type="button" data-action="admin-reject-close" style="margin-top:10px;">Закрыть</button>
@@ -2254,7 +2367,7 @@
               decision,
             }),
           }),
-          sleep(750),
+          sleep(500),
         ]);
         if (state.isAdmin) await loadAdminRequests(true);
         else await loadRequests(true);
@@ -2276,7 +2389,7 @@
           };
         }
         render();
-        await sleep(3800);
+        await sleep(2600);
         state.actionOverlay = null;
         showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Восстановлен прежний состав заявки');
       } catch (err) {
@@ -2502,7 +2615,7 @@
               })),
             }),
           }),
-          sleep(900),
+          sleep(580),
         ]);
         state.cart = {};
         state.qtyDraft = {};
@@ -2518,7 +2631,7 @@
           sub: 'Менеджер увидит её в Telegram',
         };
         render();
-        await sleep(3200);
+        await sleep(2200);
         state.actionOverlay = null;
         showNotice('Заявка отправлена менеджеру');
       } catch (err) {
@@ -2540,7 +2653,7 @@
             method: 'POST',
             body: JSON.stringify({ telegram_id: tgIdForApi(), request_id: requestId }),
           }),
-          sleep(700),
+          sleep(450),
         ]);
         await loadRequests(true);
         await loadProducts(true);
@@ -2552,7 +2665,7 @@
           sub: 'Резерв по позициям снят',
         };
         render();
-        await sleep(3800);
+        await sleep(2600);
         state.actionOverlay = null;
         showNotice('Заявка отменена');
       } catch (err) {
@@ -2563,7 +2676,7 @@
           sub: 'Обновите страницу, чтобы увидеть актуальный статус заявки.',
         };
         render();
-        await sleep(4200);
+        await sleep(2800);
         state.actionOverlay = null;
         showNotice(translateApiError(err.message) || 'Не удалось отменить заявку');
       }
@@ -2762,7 +2875,9 @@
       }
       return `
         <section class="stack">
-          <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" />
+          <div class="product-hero-frame">
+            <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" />
+          </div>
           <div class="panel">
             <div class="product-top">
               <div>
@@ -2889,40 +3004,68 @@
       `;
     }
 
-    function renderRequests() {
-      if (state.loadingRequests) {
-        return `
-        <section class="stack">
-          <div class="section-head">
-            <h2 class="section-title">Мои заявки</h2>
-            <button class="soft-btn" data-action="reload-requests">Обновить</button>
-          </div>
-          <div class="catalog-loading-screen">
-            <div class="action-overlay-spinner"></div>
-            <span>Загружаем заявки…</span>
-          </div>
-        </section>`;
-      }
+    function buildRequestCardInner(item, mode) {
+      const isAdmin = mode === 'admin';
+      const st = item.status || '';
+      const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
+      const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
+      const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
+      const dWeek = dIso ? weekdayFullRu(dIso) : '';
+      const canDelete = isAdmin && (st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client');
+      const canAct = isAdmin && (item.status === 'new' || item.status === 'change_requested');
+
+      const headlineRight = isAdmin
+        ? `<div class="request-head-right">${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}<span class="request-time">${formatAdminTime(item.created_at)}</span></div>`
+        : `<span class="request-time">${formatAdminTime(item.created_at)}</span>`;
+
+      const statusBlock = isAdmin
+        ? `<div class="request-status-badge-row"><span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span></div>`
+        : (st && st !== 'new' ? `<div class="request-mini-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</div>` : '');
+
+      const salonLine = isAdmin && item.salon_name
+        ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>`
+        : '';
+
+      const adminRejectedNote = isAdmin && item.manager_note && st === 'rejected'
+        ? `<div class="request-cancel-note"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>`
+        : '';
+
+      const clientRevision = !isAdmin && item.status === 'change_requested' && (item.previous_items || []).length
+        ? `
+                <div class="revision-banner" style="margin-top:12px;">
+                  <b>Менеджер внёс изменения.</b> Примите новый состав или отклоните заявку целиком.
+                  ${item.manager_note ? `<div style="margin-top:8px;">${escapeHtml(item.manager_note)}</div>` : ''}
+                </div>
+                <div class="revision-actions">
+                  <button class="btn" type="button" data-action="revision-accept" data-id="${item.id}">Принять изменения</button>
+                  <button class="btn-outline" type="button" style="border-color:#fecaca;color:var(--danger);" data-action="cancel-request" data-id="${item.id}">Отклонить заявку</button>
+                </div>
+              `
+        : '';
+
+      const clientCancelNew = !isAdmin && item.status === 'new'
+        ? `
+                <div class="actions" style="margin-top:14px;">
+                  <button class="btn-outline" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
+                </div>
+              `
+        : '';
+
+      const adminFooter = isAdmin && canAct
+        ? `
+            <button class="btn" type="button" data-action="admin-approve-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Подтвердить заявку</button>
+            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:8px;">Редактировать заявку</button>
+            <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить</button>
+          `
+        : '';
+
       return `
-        <section class="stack">
-          <div class="section-head">
-            <h2 class="section-title">Мои заявки</h2>
-            <button class="soft-btn" data-action="reload-requests">Обновить</button>
-          </div>
-          ${!state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
-          ${state.requests.map((item) => {
-            const st = item.status || '';
-            const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
-            const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
-            const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
-            const dWeek = dIso ? weekdayFullRu(dIso) : '';
-            return `
-            <article class="request-card">
               <div class="request-card-headline">
                 <span class="request-id">Заявка #${item.id}</span>
-                <span class="request-time">${formatAdminTime(item.created_at)}</span>
+                ${headlineRight}
               </div>
-              ${st && st !== 'new' ? `<div class="request-mini-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</div>` : ''}
+              ${salonLine}
+              ${statusBlock}
               <div class="request-stat-strip">
                 <div class="request-stat-cell">
                   <span class="request-stat-label">Стеблей</span>
@@ -2951,25 +3094,40 @@
                   </div>
                 `).join('')}
               </div>
-              ${note ? `<div class="request-cancel-note"><b>Комментарий менеджера:</b><br/>${note}</div>` : ''}
-              ${item.status === 'change_requested' && (item.previous_items || []).length ? `
-                <div class="revision-banner" style="margin-top:12px;">
-                  <b>Менеджер внёс изменения.</b> Примите новый состав или отклоните заявку целиком.
-                  ${item.manager_note ? `<div style="margin-top:8px;">${escapeHtml(item.manager_note)}</div>` : ''}
-                </div>
-                <div class="revision-actions">
-                  <button class="btn" type="button" data-action="revision-accept" data-id="${item.id}">Принять изменения</button>
-                  <button class="btn-outline" type="button" style="border-color:#fecaca;color:var(--danger);" data-action="cancel-request" data-id="${item.id}">Отклонить заявку</button>
-                </div>
-              ` : ''}
-              ${item.status === 'new' ? `
-                <div class="actions" style="margin-top:14px;">
-                  <button class="btn-outline" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
-                </div>
-              ` : ''}
+              ${!isAdmin && note ? `<div class="request-cancel-note"><b>Комментарий менеджера:</b><br/>${note}</div>` : ''}
+              ${adminRejectedNote}
+              ${clientRevision}
+              ${clientCancelNew}
+              ${adminFooter}
+            `;
+    }
+
+    function renderRequests() {
+      if (state.loadingRequests) {
+        return `
+        <section class="stack">
+          <div class="section-head">
+            <h2 class="section-title">Мои заявки</h2>
+            <button class="soft-btn" data-action="reload-requests">Обновить</button>
+          </div>
+          <div class="catalog-loading-screen">
+            <div class="action-overlay-spinner"></div>
+            <span>Загружаем заявки…</span>
+          </div>
+        </section>`;
+      }
+      return `
+        <section class="stack">
+          <div class="section-head">
+            <h2 class="section-title">Мои заявки</h2>
+            <button class="soft-btn" data-action="reload-requests">Обновить</button>
+          </div>
+          ${!state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
+          ${state.requests.map((item) => `
+            <article class="request-card">
+              ${buildRequestCardInner(item, 'client')}
             </article>
-          `;
-          }).join('')}
+          `).join('')}
         </section>
       `;
     }
@@ -3125,36 +3283,10 @@
     function renderAdminRequestCard(item) {
       const st = item.status || '';
       const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
-      const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
-      const canAct = item.status === 'new' || item.status === 'change_requested';
-      const canDelete = st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client';
-      const pulse = state.adminHighlightId === item.id ? ' admin-req-card--pulse' : '';
+      const pulse = state.adminHighlightId === item.id ? ' request-card--pulse' : '';
       return `
-        <article class="admin-req-card status-${stCls}${pulse}">
-          <div class="admin-req-card-head">
-            <div class="admin-req-top">
-              <div>
-                <div class="product-name">#${item.id}</div>
-                <div class="request-stems-hero" style="margin-top:8px;font-size:22px;">${item.total_stems || 0}<span>стеблей</span></div>
-                <div class="muted" style="margin-top:4px;font-size:13px;font-weight:700;">${money(item.total_amount || 0)}</div>
-                ${dd ? `<div class="request-delivery-line" style="margin-top:6px;">Поставка: <b>${escapeHtml(dd)}</b></div>` : ''}
-              </div>
-              <div class="admin-req-meta">
-                <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
-                <div class="admin-req-time">${formatAdminTime(item.created_at)}</div>
-              </div>
-            </div>
-            ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
-          </div>
-          <div class="admin-req-lines">
-            ${(item.items || []).map((row) => `• ${escapeHtml(row.name)} — ${row.qty} шт`).join('<br/>')}
-          </div>
-          ${item.manager_note && st === 'rejected' ? `<div class="request-cancel-note" style="margin-top:10px;"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>` : ''}
-          ${canAct ? `
-            <button class="btn" type="button" data-action="admin-approve-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Подтвердить заявку</button>
-            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:8px;">Редактировать заявку</button>
-            <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить с комментарием</button>
-          ` : ''}
+        <article class="request-card admin-request-card status-${stCls}${pulse}">
+          ${buildRequestCardInner(item, 'admin')}
         </article>
       `;
     }
@@ -3413,9 +3545,15 @@
         ${renderRejectModal()}
       `;
 
+      syncQtyInputsFromState(app);
+
       if (qtyFocusId != null) {
         const inp = app.querySelector('[data-action="qty-input"][data-id="' + qtyFocusId + '"]');
         if (inp && typeof inp.focus === 'function') {
+          const k = String(qtyFocusId);
+          const qty = state.cart[qtyFocusId] || state.cart[k] || 0;
+          const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(qty > 0 ? qty : '');
+          inp.value = displayVal;
           inp.focus();
           if (qtySelStart != null && typeof inp.setSelectionRange === 'function') {
             try { inp.setSelectionRange(qtySelStart, qtySelEnd); } catch (_) {}
@@ -3608,7 +3746,7 @@
         qtyInputBlurTimer = window.setTimeout(() => {
           qtyInputBlurTimer = null;
           setQtyFromInput(pid, val);
-        }, 520);
+        }, 160);
       },
       true,
     );
@@ -3629,6 +3767,7 @@
         const hm = /adminReq=(\d+)/.exec(window.location.hash || '');
         if (hm && state.isAdmin) await openAdminEditor(Number(hm[1]));
       } finally {
+        updateBootSplashGreeting();
         hideBootSplash();
         render();
       }

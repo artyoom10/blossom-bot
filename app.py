@@ -405,7 +405,7 @@ def load_salon_by_tg(telegram_id: int | str) -> Optional[Dict[str, Any]]:
     r = supabase_get(
         "salons",
         {
-            "select": "id,name,tg_chat,address,phone,created_at",
+            "select": "id,name,tg_chat,address,phone,created_at,contact_name",
             "tg_chat": f"eq.{telegram_id}",
             "limit": 1,
         },
@@ -1271,8 +1271,6 @@ def api_admin_reject_request(request_id: int):
         return err[0], err[1]
     payload = request.get_json(silent=True) or {}
     comment = (payload.get("comment") or "").strip()
-    if len(comment) < 2:
-        return jsonify({"ok": False, "error": "comment required"}), 400
 
     row = load_request_by_id(request_id)
     if not row:
@@ -1284,7 +1282,7 @@ def api_admin_reject_request(request_id: int):
         REQUESTS_TABLE,
         {
             "status": "rejected",
-            "manager_note": comment,
+            "manager_note": comment if comment else None,
             "updated_at": now_iso(),
         },
         params={"id": f"eq.{request_id}"},
@@ -1298,10 +1296,11 @@ def api_admin_reject_request(request_id: int):
     if admin_message_id and ADMIN_CHAT_ID:
         tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
     if ADMIN_CHAT_ID:
-        tg_send_message(
-            ADMIN_CHAT_ID,
-            f"❌ Заявка #{request_id} отменена менеджером с комментарием.",
-        )
+        if comment:
+            adm_rej = f"❌ Заявка #{request_id} отменена менеджером.\nКомментарий: {html.escape(comment)}"
+        else:
+            adm_rej = f"❌ Заявка #{request_id} отменена менеджером (без комментария)."
+        tg_send_message(ADMIN_CHAT_ID, adm_rej)
     notify_client(updated, "rejected")
     return jsonify({"ok": True, "request": updated})
 
