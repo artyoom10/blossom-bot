@@ -4,7 +4,7 @@ import html
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import date as date_cls, datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 from urllib.parse import parse_qsl
 
@@ -252,6 +252,123 @@ def require_admin_from_header() -> Tuple[Optional[Dict[str, Any]], Optional[Tupl
     return user, None
 
 
+_MONTHS_RU = (
+    "",
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
+)
+_WEEKDAYS_RU = (
+    "понедельник",
+    "вторник",
+    "среда",
+    "четверг",
+    "пятница",
+    "суббота",
+    "воскресенье",
+)
+
+
+def parse_iso_date_only(value: Any) -> Optional[date_cls]:
+    if value is None:
+        return None
+    t = str(value).strip()[:10]
+    if len(t) < 10 or t[4] != "-" or t[7] != "-":
+        return None
+    try:
+        y, m, d = int(t[0:4]), int(t[5:7]), int(t[8:10])
+        return date_cls(y, m, d)
+    except ValueError:
+        return None
+
+
+def format_date_ru_long(value: Any) -> str:
+    """Напр. 17 апреля 2026 года (пятница). Без HTML-экранирования — экранируйте при вставке в разметку."""
+    d = parse_iso_date_only(value)
+    if not d:
+        return str(value).strip()[:64] if value else ""
+    wd = _WEEKDAYS_RU[d.weekday()]
+    return f"{d.day} {_MONTHS_RU[d.month]} {d.year} года ({wd})"
+
+
+def add_items_to_reservation_map(acc: Dict[int, int], items: Any) -> None:
+    if not isinstance(items, list):
+        return
+    for it in items:
+        try:
+            fid = int(it.get("id"))
+        except (TypeError, ValueError):
+            continue
+        q = int(it.get("qty") or it.get("quantity") or 0)
+        if q <= 0:
+            continue
+        acc[fid] = acc.get(fid, 0) + q
+
+
+def aggregate_pending_reservations() -> Dict[int, int]:
+    """Сумма количеств в заявках со статусом new и change_requested (ещё не списано со склада)."""
+    out: Dict[int, int] = {}
+    r = supabase_get(
+        REQUESTS_TABLE,
+        {
+            "select": "items",
+            "status": "in.(new,change_requested)",
+            "limit": 1000,
+        },
+    )
+    if not r.ok:
+        r2 = supabase_get(REQUESTS_TABLE, {"select": "items,status", "limit": 1000})
+        if not r2.ok:
+            return out
+        for row in r2.json() or []:
+            if row.get("status") not in ("new", "change_requested"):
+                continue
+            add_items_to_reservation_map(out, row.get("items"))
+        return out
+    for row in r.json() or []:
+        add_items_to_reservation_map(out, row.get("items"))
+    return out
+
+
+def deduct_stems_from_inventory_for_items(items: List[Dict[str, Any]]) -> None:
+    """Списание стеблей при подтверждении заявки."""
+    for it in items or []:
+        try:
+            fid = int(it.get("id"))
+        except (TypeError, ValueError):
+            continue
+        qty = int(it.get("qty") or it.get("quantity") or 0)
+        if qty <= 0:
+            continue
+        fr = supabase_get("flower_types", {"select": "stems_count", "id": f"eq.{fid}", "limit": 1})
+        if not fr.ok:
+            continue
+        rows = fr.json() or []
+        if not rows:
+            continue
+        cur = rows[0].get("stems_count")
+        try:
+            cur_i = int(cur) if cur is not None else 0
+        except (TypeError, ValueError):
+            cur_i = 0
+        new_val = max(0, cur_i - qty)
+        supabase_patch(
+            "flower_types",
+            {"stems_count": new_val},
+            params={"id": f"eq.{fid}"},
+            prefer_return=False,
+        )
+
+
 def parse_rub_price(value: Any) -> float:
     if value is None:
         return 0.0
@@ -393,10 +510,10 @@ def format_delivery_line(request_row: Dict[str, Any]) -> str:
     d = request_row.get("delivery_date")
     if not d:
         return ""
-    s = str(d).strip()
+    s = format_date_ru_long(d)
     if not s:
         return ""
-    return f"Желаемая дата поставки: <b>{html.escape(s[:32])}</b>\n"
+    return f"Желаемая дата поставки: <b>{html.escape(s)}</b>\n"
 
 
 def build_client_order_details_message(request_row: Dict[str, Any], title: str) -> str:
@@ -426,20 +543,32 @@ def build_revision_diff_message(request_row: Dict[str, Any]) -> str:
         "",
         f"Заявка <b>#{html.escape(str(rid))}</b>",
         "",
-        "<b>Было:</b>",
+        "<b>Было (позиции):</b>",
         html.escape(build_items_summary_plain(prev) or "—"),
         "",
-        "<b>Стало:</b>",
+        "<b>Стало (позиции):</b>",
         html.escape(build_items_summary_plain(cur)),
         "",
         f"Новый итог: <b>{float(request_row.get('total_amount') or 0):.0f} ₽</b>, "
         f"стеблей: <b>{int(request_row.get('total_stems') or 0)}</b>",
     ]
+    pd = request_row.get("previous_delivery_date")
+    cd = request_row.get("delivery_date")
+    pdd = parse_iso_date_only(pd)
+    cdd = parse_iso_date_only(cd)
+    if pdd and cdd and pdd != cdd:
+        lines.extend(
+            [
+                "",
+                "<b>Дата поставки:</b>",
+                f"было — <b>{html.escape(format_date_ru_long(pd))}</b>",
+                f"стало — <b>{html.escape(format_date_ru_long(cd))}</b>",
+            ]
+        )
+    elif cdd and not pdd:
+        lines.extend(["", f"<b>Дата поставки:</b> <b>{html.escape(format_date_ru_long(cd))}</b>"])
     if note:
         lines.extend(["", "<b>Комментарий менеджера:</b>", html.escape(note)])
-    dd = request_row.get("delivery_date")
-    if dd:
-        lines.extend(["", f"Дата поставки: <b>{html.escape(str(dd)[:32])}</b>"])
     return "\n".join(lines)
 
 
@@ -497,7 +626,13 @@ def salon_stats_for_telegram(telegram_id: int | str) -> Dict[str, Any]:
     return {"approved_rub": round(rub, 2), "approved_stems": stems}
 
 
-def build_products_from_flowers(flowers: List[Dict[str, Any]], *, for_admin: bool) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+def build_products_from_flowers(
+    flowers: List[Dict[str, Any]],
+    *,
+    for_admin: bool,
+    reserved_map: Optional[Dict[int, int]] = None,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    reserved_map = reserved_map or {}
     categories: Dict[str, int] = {"Все": 0}
     products: List[Dict[str, Any]] = []
     for flower in flowers:
@@ -505,7 +640,14 @@ def build_products_from_flowers(flowers: List[Dict[str, Any]], *, for_admin: boo
             continue
         name = flower.get("name") or f"Цветок #{flower.get('id')}"
         category = name.split()[0] if name else "Каталог"
-        stock = flower_effective_stock(flower)
+        fid = int(flower["id"])
+        physical = flower_effective_stock(flower)
+        reserved = int(reserved_map.get(fid, 0))
+        if for_admin:
+            available = physical
+        else:
+            available = max(0, physical - reserved)
+        stock = available
         price = flower_effective_price(flower)
         item = {
             "id": flower["id"],
@@ -514,6 +656,8 @@ def build_products_from_flowers(flowers: List[Dict[str, Any]], *, for_admin: boo
             "price": price,
             "min": 1,
             "stock": stock,
+            "stems_physical": physical,
+            "reserved_pending": reserved,
             "stem": f"{flower.get('stem_length_cm')} см" if flower.get("stem_length_cm") else "—",
             "price_label": f"{price:.0f} ₽ / стебель" if price > 0 else "Цена по запросу",
             "status": "В наличии" if stock > 0 else "Нет в наличии",
@@ -615,7 +759,10 @@ def api_products():
 
     try:
         flowers = load_flower_types()
-        products, category_list = build_products_from_flowers(flowers, for_admin=False)
+        reserved = aggregate_pending_reservations()
+        products, category_list = build_products_from_flowers(
+            flowers, for_admin=False, reserved_map=reserved
+        )
         return jsonify({"ok": True, "products": products, "categories": category_list})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -631,7 +778,8 @@ def api_admin_catalog():
         return err[0], err[1]
     try:
         flowers = load_flower_types()
-        products, _ = build_products_from_flowers(flowers, for_admin=True)
+        reserved = aggregate_pending_reservations()
+        products, _ = build_products_from_flowers(flowers, for_admin=True, reserved_map=reserved)
         return jsonify({"ok": True, "flowers": products})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -925,6 +1073,24 @@ def api_order():
             return jsonify({"ok": False, "error": "invalid_delivery_date"}), 400
 
     try:
+        reserved_map = aggregate_pending_reservations()
+        flowers = load_flower_types()
+        by_id = {int(f["id"]): f for f in flowers}
+        for it in normalized_items:
+            try:
+                fi = int(it.get("id"))
+            except (TypeError, ValueError):
+                return jsonify({"ok": False, "error": "invalid_item_id"}), 400
+            frow = by_id.get(fi)
+            if not frow:
+                return jsonify({"ok": False, "error": "unknown_flower"}), 400
+            phys = flower_effective_stock(frow)
+            res = reserved_map.get(fi, 0)
+            avail = max(0, phys - res)
+            qty = int(it.get("qty") or 0)
+            if qty > avail:
+                return jsonify({"ok": False, "error": "insufficient_stock", "flower_id": fi, "available": avail}), 400
+
         salon_id = salon.get("id")
         salon_name = salon.get("name") or "Салон"
 
@@ -947,7 +1113,9 @@ def api_order():
             return jsonify({"ok": False, "error": "request_not_created"}), 500
 
         manager_link = build_telegram_link(telegram_id, telegram_username, telegram_name)
-        dd_line = f"Дата поставки: <b>{html.escape(delivery_date)}</b>\n" if delivery_date else ""
+        dd_line = (
+            f"Дата поставки: <b>{html.escape(format_date_ru_long(delivery_date))}</b>\n" if delivery_date else ""
+        )
         text = (
             f"🌸 <b>Новая заявка #{created['id']}</b>\n"
             f"Салон: <b>{html.escape(salon_name)}</b>\n"
@@ -1146,6 +1314,7 @@ def api_revision_response():
 
         salon_label = html.escape(str(updated.get("salon_name") or "Салон"))
         if decision == "accept":
+            deduct_stems_from_inventory_for_items(updated.get("items") or [])
             if ADMIN_CHAT_ID:
                 tg_send_message(
                     ADMIN_CHAT_ID,
@@ -1250,6 +1419,7 @@ def webhook():
                 tg_answer_callback(callback_id, "Неизвестное действие")
             return jsonify({"ok": True})
 
+        items_for_inventory = request_row.get("items") or []
         patch_cb: Dict[str, Any] = {"status": new_status, "updated_at": now_iso()}
         if new_status == "rejected":
             patch_cb["manager_note"] = None
@@ -1261,6 +1431,8 @@ def webhook():
         )
         if upd.ok:
             request_row = (upd.json() or [request_row])[0]
+            if new_status == "approved":
+                deduct_stems_from_inventory_for_items(items_for_inventory)
 
         if callback_id:
             tg_answer_callback(callback_id, answer_text)

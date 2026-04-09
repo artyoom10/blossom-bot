@@ -1115,6 +1115,54 @@
       color: var(--muted);
       line-height: 1.45;
     }
+    .action-overlay-spinner {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 20px;
+      border: 3px solid rgba(31, 122, 91, .2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: action-spin .75s linear infinite;
+    }
+    @keyframes action-spin {
+      to { transform: rotate(360deg); }
+    }
+    .action-overlay-loading-text {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .checkout-date-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      margin-top: 8px;
+    }
+    .checkout-dow {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .stock-lock-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eceff2;
+      color: #6c7380;
+      font-size: 12px;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+    .stock-lock-icon {
+      width: 12px;
+      height: 12px;
+      opacity: .85;
+    }
   </style>
 </head>
 <body>
@@ -1175,7 +1223,8 @@
       adminFlowers: [],
       loadingAdmin: false,
       adminEditor: null,
-      orderSuccessVisible: false,
+      /** { phase:'loading'|'success', variant, title?, sub?, loadingText? } | null */
+      actionOverlay: null,
       adminSalonFilter: 'all',
     };
 
@@ -1190,15 +1239,31 @@
       return state.linked && !!state.salon;
     }
 
-    let orderSuccessTimer = null;
-    function showOrderSuccessOverlay() {
-      window.clearTimeout(orderSuccessTimer);
-      state.orderSuccessVisible = true;
-      render();
-      orderSuccessTimer = window.setTimeout(() => {
-        state.orderSuccessVisible = false;
-        render();
-      }, 2200);
+    let actionOverlayTimer = null;
+    const lockIconSvg = '<svg class="stock-lock-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>';
+
+    function formatLongDateRu(iso) {
+      if (!iso || String(iso).length < 10) return '';
+      try {
+        const s = String(iso).slice(0, 10);
+        const d = new Date(`${s}T12:00:00`);
+        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        const wd = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} года (${wd[d.getDay()]})`;
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function weekdayShortRu(iso) {
+      if (!iso || String(iso).length < 10) return '';
+      try {
+        const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+        const wd = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+        return wd[d.getDay()];
+      } catch (_) {
+        return '';
+      }
     }
 
     const iconNav = {
@@ -1246,12 +1311,17 @@
       window.setTimeout(() => el.remove(), 600);
     }
 
-    /** Строка «остаток» без лишнего «— ·», если длина стебля не задана */
+    /** Остаток: свободно + зарезервировано в заявках (серый замок). */
     function productStockLine(item) {
       const stem = String(item.stem ?? '').trim();
       const hasStem = stem && stem !== '—' && stem !== '-';
       const stemPart = hasStem ? `${escapeHtml(stem)} · ` : '';
-      return `${stemPart}Остаток: ${item.stock}`;
+      const avail = Number(item.stock ?? 0);
+      const res = Number(item.reserved_pending ?? 0);
+      const lock = res > 0
+        ? `<span class="stock-lock-wrap" title="В неподтверждённых заявках">${lockIconSvg}<span>${res}</span></span>`
+        : '';
+      return `${stemPart}В наличии: <b>${avail}</b>${lock}`;
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -1289,21 +1359,14 @@
         approved: 'Подтверждена',
         rejected: 'Отклонена',
         rejected_by_client: 'Отклонена',
-        change_requested: 'Нужно изменить',
+        change_requested: 'Изменена',
         cancelled_by_client: 'Отменена вами',
       };
       return map[status] || status;
     }
 
     function formatRequestDate(iso) {
-      if (!iso) return '';
-      try {
-        const s = String(iso).slice(0, 10);
-        const d = new Date(s.length === 10 ? `${s}T12:00:00` : iso);
-        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
-      } catch (_) {
-        return '';
-      }
+      return formatLongDateRu(iso);
     }
 
     function salonLogoUrl(salonId) {
@@ -1484,6 +1547,9 @@
 
     async function submitAdminRevision() {
       if (!state.adminEditor) return;
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = { phase: 'loading', variant: 'admin-revise', loadingText: 'Отправляем правки…' };
+      render();
       const ed = state.adminEditor;
       const items = ed.items
         .map((line, idx) => {
@@ -1499,26 +1565,45 @@
       const dEl = document.querySelector('[data-admin-revise-delivery]');
       const deliveryDate = (dEl && dEl.value ? dEl.value : ed.deliveryDate || '').trim().slice(0, 10);
       if (!items.length) {
+        state.actionOverlay = null;
         showNotice('Нужна хотя бы одна позиция с количеством');
+        render();
         return;
       }
       if (comment.length < 2) {
+        state.actionOverlay = null;
         showNotice('Добавьте комментарий для клиента');
+        render();
         return;
       }
       try {
-        const res = await fetch(`/api/admin/request/${ed.id}/revise`, {
-          method: 'POST',
-          headers: initDataHeaders(),
-          body: JSON.stringify({ items, comment, delivery_date: deliveryDate || undefined }),
-        });
+        const [res] = await Promise.all([
+          fetch(`/api/admin/request/${ed.id}/revise`, {
+            method: 'POST',
+            headers: initDataHeaders(),
+            body: JSON.stringify({ items, comment, delivery_date: deliveryDate || undefined }),
+          }),
+          sleep(800),
+        ]);
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
         state.adminEditor = null;
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
         await loadAdminRequests();
+        await loadProducts();
+        window.clearTimeout(actionOverlayTimer);
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'admin-revise',
+          title: 'Правки отправлены',
+          sub: 'Клиент получит уведомление в Telegram',
+        };
+        render();
+        await sleep(2200);
+        state.actionOverlay = null;
         showNotice('Клиенту отправлены правки');
       } catch (err) {
+        state.actionOverlay = null;
         showNotice(err.message || 'Не удалось сохранить');
       }
       render();
@@ -1568,22 +1653,53 @@
     }
 
     async function revisionRespond(requestId, decision) {
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = {
+        phase: 'loading',
+        variant: 'revision',
+        loadingText: decision === 'accept' ? 'Принимаем изменения…' : 'Возвращаем заявку…',
+      };
+      render();
       try {
-        await api('/api/request/revision-response', {
-          method: 'POST',
-          body: JSON.stringify({
-            telegram_id: tgIdForApi(),
-            request_id: requestId,
-            decision,
+        await Promise.all([
+          api('/api/request/revision-response', {
+            method: 'POST',
+            body: JSON.stringify({
+              telegram_id: tgIdForApi(),
+              request_id: requestId,
+              decision,
+            }),
           }),
-        });
+          sleep(750),
+        ]);
         if (state.isAdmin) await loadAdminRequests();
         else await loadRequests();
+        await loadProducts();
         notifySuccess();
+        if (decision === 'accept') {
+          state.actionOverlay = {
+            phase: 'success',
+            variant: 'revision-ok',
+            title: 'Изменения приняты',
+            sub: 'Заявка подтверждена с новым составом',
+          };
+        } else {
+          state.actionOverlay = {
+            phase: 'success',
+            variant: 'revision-reject',
+            title: 'Изменения отклонены',
+            sub: 'Заявка снова на рассмотрении',
+          };
+        }
+        render();
+        await sleep(2400);
+        state.actionOverlay = null;
         showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Восстановлен прежний состав заявки');
       } catch (err) {
+        state.actionOverlay = null;
         showNotice(err.message || 'Не удалось выполнить действие');
       }
+      render();
     }
 
     function isRetryableApiError(err, res) {
@@ -1743,39 +1859,53 @@
     async function submitOrder() {
       const items = cartItems();
       if (!items.length || state.submitting) return;
+      const dd = (state.deliveryDate || '').trim().slice(0, 10);
+      if (!dd || dd.length < 10) {
+        showNotice('Укажите желаемую дату поставки');
+        render();
+        return;
+      }
       state.submitting = true;
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = { phase: 'loading', variant: 'order', loadingText: 'Оформляем заявку…' };
       render();
       try {
-        const dd = (state.deliveryDate || '').trim().slice(0, 10);
-        if (!dd || dd.length < 10) {
-          showNotice('Укажите желаемую дату поставки');
-          state.submitting = false;
-          render();
-          return;
-        }
-        await api('/api/order', {
-          method: 'POST',
-          body: JSON.stringify({
-            telegram_id: tgIdForApi(),
-            telegram_name: state.telegramName,
-            telegram_username: state.telegramUsername,
-            delivery_date: dd,
-            items: items.map((item) => ({
-              id: item.id,
-              name: item.name,
-              qty: item.qty,
-              price: item.price,
-            })),
+        await Promise.all([
+          api('/api/order', {
+            method: 'POST',
+            body: JSON.stringify({
+              telegram_id: tgIdForApi(),
+              telegram_name: state.telegramName,
+              telegram_username: state.telegramUsername,
+              delivery_date: dd,
+              items: items.map((item) => ({
+                id: item.id,
+                name: item.name,
+                qty: item.qty,
+                price: item.price,
+              })),
+            }),
           }),
-        });
+          sleep(900),
+        ]);
         state.cart = {};
         state.deliveryDate = '';
         state.activeTab = 'orders';
         await loadRequests();
+        await loadProducts();
         notifySuccess();
-        showOrderSuccessOverlay();
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'order',
+          title: 'Заявка отправлена',
+          sub: 'Менеджер увидит её в Telegram',
+        };
+        render();
+        await sleep(2600);
+        state.actionOverlay = null;
         showNotice('Заявка отправлена менеджеру');
       } catch (err) {
+        state.actionOverlay = null;
         showNotice(err.message || 'Не удалось отправить заявку');
       } finally {
         state.submitting = false;
@@ -1784,17 +1914,35 @@
     }
 
     async function cancelRequest(requestId) {
+      window.clearTimeout(actionOverlayTimer);
+      state.actionOverlay = { phase: 'loading', variant: 'cancel', loadingText: 'Отменяем заявку…' };
+      render();
       try {
-        await api('/api/request/cancel', {
-          method: 'POST',
-          body: JSON.stringify({ telegram_id: tgIdForApi(), request_id: requestId }),
-        });
-        notifySuccess();
-        showNotice('Заявка отменена');
+        await Promise.all([
+          api('/api/request/cancel', {
+            method: 'POST',
+            body: JSON.stringify({ telegram_id: tgIdForApi(), request_id: requestId }),
+          }),
+          sleep(700),
+        ]);
         await loadRequests();
+        await loadProducts();
+        notifySuccess();
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'cancel',
+          title: 'Заявка отменена',
+          sub: 'Резерв по позициям снят',
+        };
+        render();
+        await sleep(2200);
+        state.actionOverlay = null;
+        showNotice('Заявка отменена');
       } catch (err) {
+        state.actionOverlay = null;
         showNotice(err.message || 'Не удалось отменить заявку');
       }
+      render();
     }
 
     function updateTelegramButtons() {
@@ -1975,7 +2123,7 @@
             <div class="product-top">
               <div>
                 <h2 class="title" style="font-size:26px;">${escapeHtml(item.name)}</h2>
-                <div class="muted" style="margin-top:8px;">Остаток: ${item.stock}</div>
+                <div class="muted" style="margin-top:8px;">${productStockLine(item)}</div>
               </div>
               <span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>
             </div>
@@ -1994,7 +2142,7 @@
               </div>
               <div class="detail-card">
                 <div class="detail-label">Наличие</div>
-                <div class="detail-value">${item.stock} шт.</div>
+                <div class="detail-value">${item.stock} своб.${Number(item.reserved_pending) > 0 ? ` · ${item.reserved_pending} в заявках` : ''}</div>
               </div>
             </div>
             <div class="actions actions--single" style="margin-top:16px;">
@@ -2055,13 +2203,17 @@
 
     function renderCheckout() {
       const dd = state.deliveryDate || new Date().toISOString().slice(0, 10);
+      const dow = weekdayShortRu(dd);
       return `
         <section class="stack">
           <div class="panel">
             <h2 class="section-title">Оформление заявки</h2>
             <div class="muted" style="margin-top:6px;">После отправки менеджер получит заявку и ответит в Telegram.</div>
             <label class="detail-label" style="display:block;margin-top:16px;">Желаемая дата поставки</label>
-            <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" style="width:100%;margin-top:8px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
+            <div class="checkout-date-row">
+            <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" style="flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
+            ${dow ? `<span class="checkout-dow" data-checkout-dow>(${dow})</span>` : ''}
+            </div>
             <div class="detail-grid" style="margin-top:16px;">
               <div class="detail-card">
                 <div class="detail-label">Салон</div>
@@ -2436,19 +2588,33 @@
         `;
     }
 
-    function renderOrderSuccessOverlay() {
-      if (!state.orderSuccessVisible) return '';
+    function renderActionOverlay() {
+      const ov = state.actionOverlay;
+      if (!ov) return '';
+      if (ov.phase === 'loading') {
+        return `
+        <div class="order-success-overlay" aria-live="polite">
+          <div class="order-success-card">
+            <div class="action-overlay-spinner"></div>
+            <p class="action-overlay-loading-text">${escapeHtml(ov.loadingText || 'Подождите…')}</p>
+          </div>
+        </div>`;
+      }
+      const isDanger = ov.variant === 'cancel' || ov.variant === 'revision-reject';
+      const iconWrapStyle = isDanger
+        ? 'background:#fff1f1;color:var(--danger);'
+        : '';
       return `
         <div class="order-success-overlay" aria-live="polite">
           <div class="order-success-card">
-            <div class="order-success-icon-wrap">
+            <div class="order-success-icon-wrap" style="${iconWrapStyle}">
               <svg class="order-success-check" viewBox="0 0 52 52" aria-hidden="true">
                 <circle class="order-success-circle" cx="26" cy="26" r="23" fill="none" stroke="currentColor" stroke-width="2.5"/>
                 <path class="order-success-tick" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M14 27l9 9 17-20"/>
               </svg>
             </div>
-            <p class="order-success-title">Заявка отправлена</p>
-            <p class="order-success-sub">Менеджер увидит её в Telegram</p>
+            <p class="order-success-title">${escapeHtml(ov.title || 'Готово')}</p>
+            <p class="order-success-sub">${escapeHtml(ov.sub || '')}</p>
           </div>
         </div>
       `;
@@ -2507,7 +2673,7 @@
         </div>
         ${renderAdminEditorModal()}
         ${renderRejectModal()}
-        ${renderOrderSuccessOverlay()}
+        ${renderActionOverlay()}
       `;
 
       updateTelegramButtons();
@@ -2517,6 +2683,8 @@
       const t = event.target;
       if (t && t.matches && t.matches('[data-checkout-delivery]')) {
         state.deliveryDate = (t.value || '').slice(0, 10);
+        render();
+        return;
       }
       if (t && t.matches && t.matches('[data-action="admin-filter-salon"]')) {
         const v = t.value;
