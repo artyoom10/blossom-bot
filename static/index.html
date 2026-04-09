@@ -317,6 +317,19 @@
       color: var(--text);
       padding: 12px 16px;
     }
+    .btn-cancel-request {
+      flex: 1;
+      background: var(--danger);
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .btn-cancel-request:active {
+      opacity: 0.92;
+    }
     .icon-btn {
       width: 42px;
       height: 42px;
@@ -430,24 +443,49 @@
       font-size: 14px;
     }
     .summary {
-      background: #111827;
-      color: white;
+      background: linear-gradient(165deg, #1e293b 0%, #0f172a 55%, #020617 100%);
+      color: #f8fafc;
       border-radius: 28px;
       padding: 18px;
       box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .summary-row {
       display: flex;
       justify-content: space-between;
-      color: rgba(255,255,255,.7);
+      align-items: baseline;
+      gap: 12px;
       font-size: 13px;
+    }
+    .summary-lbl {
+      color: rgba(248, 250, 252, 0.78);
+      font-weight: 600;
+    }
+    .summary-val {
+      color: #ffffff;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
     }
     .summary-total {
       display: flex;
       justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
       margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
       font-size: 24px;
+      font-weight: 800;
+    }
+    .summary-total .summary-lbl {
+      color: rgba(248, 250, 252, 0.88);
+      font-size: 15px;
       font-weight: 700;
+    }
+    .summary-total .summary-val {
+      font-size: 24px;
+      font-weight: 800;
     }
     .summary-note { margin-top: 12px; color: rgba(255,255,255,.82); font-size: 13px; }
 
@@ -471,15 +509,15 @@
       color: var(--muted);
       border-radius: 999px;
       padding: 6px 10px;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 800;
       line-height: 1.25;
       max-width: 100%;
       text-align: center;
       white-space: normal;
       word-break: break-word;
     }
-    .request-status.new { background: #edf7f2; color: var(--primary); }
+    .request-status.new { background: #dbeafe; color: #1d4ed8; }
     .request-status.change_requested { background: #fff4e5; color: #b54708; }
     .request-status.approved { background: #eaf6ee; color: #137333; }
     .request-status.rejected, .request-status.cancelled_by_client, .request-status.rejected_by_client { background: #fff1f1; color: var(--danger); }
@@ -987,7 +1025,7 @@
       transform: translateX(-50%);
       width: min(430px, 100%);
       padding: 0 16px 10px;
-      bottom: calc(58px + max(8px, env(safe-area-inset-bottom)));
+      bottom: calc(68px + max(12px, env(safe-area-inset-bottom)));
       z-index: 35;
       pointer-events: none;
     }
@@ -1003,8 +1041,7 @@
       background: linear-gradient(145deg, #1f7a5b 0%, #2d9d78 55%, #1a6b50 100%);
       box-shadow:
         0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-        0 8px 28px rgba(31, 122, 91, 0.45),
-        0 0 32px rgba(45, 157, 120, 0.35);
+        0 8px 20px rgba(31, 122, 91, 0.28);
       cursor: pointer;
     }
     .cart-checkout-glow-btn:active {
@@ -1031,7 +1068,7 @@
       cursor: not-allowed;
     }
     .cart-screen--has-checkout {
-      padding-bottom: 88px;
+      padding-bottom: 96px;
     }
     .admin-req-card-top {
       display: flex;
@@ -1103,21 +1140,27 @@
       font-weight: 700;
     }
     .admin-req-details-outer {
-      display: grid;
-      grid-template-rows: 0fr;
-      transition: grid-template-rows 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.52s cubic-bezier(0.25, 0.82, 0.2, 1);
     }
     .admin-req-details-outer.is-open {
-      grid-template-rows: 1fr;
+      max-height: min(3200px, 400vh);
     }
     .admin-req-details-inner {
       overflow: hidden;
-      min-height: 0;
     }
     .admin-req-details {
       padding-top: 12px;
       margin-top: 10px;
       border-top: 1px solid var(--border);
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.38s ease 0.06s, transform 0.42s cubic-bezier(0.25, 0.82, 0.2, 1) 0.04s;
+    }
+    .admin-req-details-outer.is-open .admin-req-details {
+      opacity: 1;
+      transform: translateY(0);
     }
     .admin-created-line {
       font-size: 13px;
@@ -1442,6 +1485,8 @@
     }
     .revision-actions .btn { width: 100%; }
     .revision-actions .btn-outline { width: 100%; }
+    .revision-actions .btn-cancel-request { width: 100%; }
+    .actions .btn-cancel-request { width: 100%; }
 
     .admin-profile-strip {
       display: flex;
@@ -1822,9 +1867,10 @@
     .request-mini-status {
       margin-top: 6px;
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       color: var(--muted);
     }
+    .request-mini-status.new { color: #1d4ed8; }
     .request-mini-status.change_requested { color: #b54708; }
     .request-mini-status.approved { color: #137333; }
     .request-mini-status.rejected,
@@ -2730,6 +2776,7 @@
         state.meMessage = 'Откройте мини-приложение через Telegram.';
         state.isAdmin = false;
         state.loadingProfile = false;
+        updateBootSplashGreeting();
         render();
         return;
       }
@@ -2752,6 +2799,7 @@
       } finally {
         if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingProfile = false;
+        updateBootSplashGreeting();
         render();
       }
     }
@@ -3194,9 +3242,9 @@
                 </article>
               `).join('')}
               <div class="summary">
-                <div class="summary-row"><span>Позиций</span><span>${items.length}</span></div>
-                <div class="summary-row" style="margin-top:8px;"><span>Стеблей</span><span>${cartCount()}</span></div>
-                <div class="summary-total"><span>Итого</span><span>${money(cartTotal())}</span></div>
+                <div class="summary-row"><span class="summary-lbl">Позиций</span><span class="summary-val">${items.length}</span></div>
+                <div class="summary-row" style="margin-top:8px;"><span class="summary-lbl">Стеблей</span><span class="summary-val">${cartCount()}</span></div>
+                <div class="summary-total"><span class="summary-lbl">Итого</span><span class="summary-val">${money(cartTotal())}</span></div>
               </div>
             </div>
             <div class="cart-checkout-bar">
@@ -3268,7 +3316,7 @@
                 </div>
                 <div class="revision-actions">
                   <button class="btn" type="button" data-action="revision-accept" data-id="${item.id}">Принять изменения</button>
-                  <button class="btn-outline" type="button" style="border-color:#fecaca;color:var(--danger);" data-action="cancel-request" data-id="${item.id}">Отклонить заявку</button>
+                  <button class="btn-cancel-request" type="button" data-action="cancel-request" data-id="${item.id}">Отклонить заявку</button>
                 </div>
               `
         : '';
@@ -3276,7 +3324,7 @@
       const clientCancelNew = item.status === 'new'
         ? `
                 <div class="actions" style="margin-top:14px;">
-                  <button class="btn-outline" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
+                  <button class="btn-cancel-request" type="button" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
                 </div>
               `
         : '';
@@ -3850,8 +3898,8 @@
       const tabs = [
         ['home', iconNav.home, 'Каталог'],
         ['orders', iconNav.orders, 'Заявки'],
-        ['profile', iconNav.person, 'Профиль'],
         ['cart', iconNav.cart, 'Корзина'],
+        ['profile', iconNav.person, 'Профиль'],
       ];
       return `
         <nav class="bottom-nav">
