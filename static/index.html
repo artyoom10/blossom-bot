@@ -81,8 +81,9 @@
       background: rgba(255, 255, 255, 0.92);
       border: 1px solid rgba(228, 232, 237, 0.9);
       box-shadow: var(--shadow);
-      font-size: 15px;
-      font-weight: 700;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
       color: var(--text);
     }
 
@@ -438,14 +439,27 @@
     .cart-row {
       display: flex;
       gap: 12px;
-      align-items: flex-start;
+      align-items: stretch;
+    }
+    .cart-trash-rail {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: stretch;
+      width: 36px;
+    }
+    .cart-qty-bottom {
+      width: 100%;
+      min-width: 0;
+      margin-top: 8px;
     }
     .cart-item-body {
       flex: 1;
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 0;
     }
     .cart-item-body .product-top {
       width: 100%;
@@ -1017,6 +1031,29 @@
       font-size: 15px;
       line-height: 1.45;
       color: var(--muted);
+      min-height: 2.8em;
+    }
+    .boot-ellipsis-dots {
+      display: inline;
+    }
+    .boot-ellipsis-dots span {
+      display: inline-block;
+      animation: boot-ellipsis-char 1.05s ease-in-out infinite;
+    }
+    .boot-ellipsis-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .boot-ellipsis-dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes boot-ellipsis-char {
+      0%, 100% { opacity: 0.2; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-1px); }
+    }
+    svg.admin-star-inline {
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 6px;
+      width: 22px;
+      height: 22px;
+      line-height: 0;
+      filter: drop-shadow(0 1px 1px rgba(180, 140, 40, 0.35));
     }
     .boot-dots {
       display: flex;
@@ -1355,11 +1392,73 @@
       width: 20px;
       height: 20px;
     }
-    .cart-qty-wrap {
+    .qty-remove-bare {
+      align-self: center;
+      width: auto;
+      height: auto;
+      min-width: 0;
+      padding: 6px;
+      border: 0;
+      background: transparent !important;
+      color: var(--danger);
+      box-shadow: none;
+      border-radius: 12px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .qty-remove-bare svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+    }
+    .product-card-head {
       display: flex;
-      align-items: stretch;
-      gap: 8px;
-      margin-top: 6px;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+      min-width: 0;
+    }
+    .product-card-head .product-row {
+      flex: 1;
+      min-width: 0;
+    }
+    .product-trash-rail {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      align-self: stretch;
+      justify-content: center;
+      padding-top: 2px;
+    }
+    .product-card-qty-bottom {
+      margin-top: 10px;
+      width: 100%;
+      min-width: 0;
+    }
+    .product-card-qty-bottom > .btn {
+      width: 100%;
+    }
+    .product-card-qty-bottom .qty-stepper {
+      margin-top: 0;
+    }
+    .product-detail-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .product-detail-head .product-top {
+      flex: 1;
+      min-width: 0;
+    }
+    .product-line-total {
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .cart-qty-wrap {
+      display: block;
       width: 100%;
       max-width: 100%;
       min-width: 0;
@@ -1406,7 +1505,7 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: 8px;
+      gap: 0;
       width: 100%;
       max-width: 100%;
       min-width: 0;
@@ -1433,7 +1532,7 @@
       max-width: 100%;
     }
     .qty-stepper--cart-stack .qty-remove {
-      align-self: flex-end;
+      display: none;
     }
 
     .nav-icon-svg {
@@ -1808,9 +1907,12 @@
     }
     .action-overlay-loading-text {
       margin: 0;
-      font-size: 17px;
-      font-weight: 700;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
       color: var(--text);
+      text-align: center;
+      line-height: 1.25;
     }
     .checkout-date-row {
       display: flex;
@@ -2219,6 +2321,8 @@
       clientExpandedRequestIds: {},
       /** Админ: полноэкранный оверлей при обновлении/сохранении (как у клиента) */
       adminBlockingMessage: null,
+      /** Рассылка: null | { step:'pick'|'confirm', salons:[], selected: Record<id,true> } */
+      broadcastModal: null,
     };
 
     let lastOverlaySyncKey = '\x00';
@@ -2275,6 +2379,8 @@
         return '';
       }
     }
+
+    const goldStarSvg = '<svg class="admin-star-inline" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path fill="#f0c850" stroke="#b8860b" stroke-width="0.7" d="M12 2.5l2.6 5.3 5.9.9-4.3 4.2 1 5.9L12 16.9 6.8 18.8l1-5.9L3.5 8.7l5.9-.9L12 2.5z"/></svg>';
 
     const iconNav = {
       home: '<svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
@@ -2346,10 +2452,42 @@
     }
 
     function hideBootSplash() {
+      try {
+        if (window._bootPhraseTimer) window.clearInterval(window._bootPhraseTimer);
+        window._bootPhraseTimer = null;
+      } catch (_) {}
       const el = document.getElementById('boot-splash');
       if (!el) return;
       el.classList.add('boot-splash--done');
       window.setTimeout(() => el.remove(), 420);
+    }
+
+    const BOOT_SPLASH_PHRASES = [
+      'Бережно упаковываем цветы',
+      'Проверяем, как там георгины на грядках',
+      'Собираем красоту с теплицы',
+      'Прощаемся с цветами перед отправкой',
+      'Проверяем, какие стебли сегодня в настроении',
+      'Смотрим, кто в поле сегодня особенно хорош',
+      'Договариваемся с погодой насчёт идеальной срезки',
+      'Проводим кастинг среди самых ровных стеблей',
+      'Собираем тех, кто точно украсит витрину',
+      'Готовим цветы к переезду в хорошие руки',
+      'Ищем самых фотогеничных жителей поля',
+    ];
+
+    function startBootSplashPhraseLoop() {
+      const el = document.getElementById('boot-splash-msg');
+      if (!el) return;
+      const renderPhrase = () => {
+        const phrase = BOOT_SPLASH_PHRASES[Math.floor(Math.random() * BOOT_SPLASH_PHRASES.length)];
+        el.innerHTML = `${escapeHtml(phrase)}<span class="boot-ellipsis-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>`;
+      };
+      renderPhrase();
+      try {
+        if (window._bootPhraseTimer) window.clearInterval(window._bootPhraseTimer);
+      } catch (_) {}
+      window._bootPhraseTimer = window.setInterval(renderPhrase, 4200);
     }
 
     function splashGreetingWord() {
@@ -2411,14 +2549,15 @@
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+    function renderTrashBare(id) {
+      return `<button type="button" class="qty-remove-bare" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>`;
+    }
     function renderQtyStepper(item, variant) {
       const id = item.id;
       const idKey = String(id);
       const qty = state.cart[id] || state.cart[idKey] || 0;
       if (qty <= 0 && state.qtyDraft[idKey] === undefined) return '';
-      if (variant === 'cart') {
-        return `
-        <div class="qty-stepper qty-stepper--cart qty-stepper--cart-stack">
+      const rowInner = `
           <div class="qty-stepper--cart-row">
             <div class="qty-stepper-deltas">
               <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-5" aria-label="Минус 5">−5</button>
@@ -2430,8 +2569,11 @@
               <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="1" aria-label="Плюс 1">+1</button>
               <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="5" aria-label="Плюс 5">+5</button>
             </div>
-          </div>
-          <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
+          </div>`;
+      if (variant === 'cart') {
+        return `
+        <div class="qty-stepper qty-stepper--cart qty-stepper--cart-stack">
+          ${rowInner}
         </div>`;
       }
       return `
@@ -2446,7 +2588,6 @@
             <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="1" aria-label="Плюс 1">+1</button>
             <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="5" aria-label="Плюс 5">+5</button>
           </div>
-          <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
         </div>
       `;
     }
@@ -2580,6 +2721,9 @@
     }
 
     function adminSalonAvatarUrl(item) {
+      if (item && item.salon_id != null && item.salon_id !== '') {
+        return salonLogoUrl(item.salon_id);
+      }
       const u = item && item.salon_logo;
       if (u && String(u).trim()) return String(u).trim();
       return '/miniapp/blossom_logo.png';
@@ -2687,7 +2831,21 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка сохранения');
         await loadProducts(true);
+        state.adminBlockingMessage = null;
+        render();
+        window.clearTimeout(actionOverlayTimer);
+        state.actionOverlay = {
+          phase: 'success',
+          variant: 'catalog-saved',
+          title: 'Сохранено',
+          sub: 'Каталог обновлён в базе',
+        };
+        render();
+        await sleep(2000);
+        state.actionOverlay = null;
         showNotice('Каталог сохранён');
+      } catch (err) {
+        showNotice(err.message || 'Ошибка сохранения');
       } finally {
         state.adminBlockingMessage = null;
         render();
@@ -2914,6 +3072,94 @@
           </div>
         </div>
       `;
+    }
+
+    function renderBroadcastModal() {
+      const m = state.broadcastModal;
+      if (!m) return '';
+      if (m.step === 'confirm') {
+        const n = Object.keys(m.selected || {}).length;
+        return `
+        <div class="admin-modal">
+          <button type="button" class="admin-modal-dismiss" data-action="broadcast-close" aria-label="Закрыть"></button>
+          <div class="admin-modal-panel">
+            <h3 class="section-title" style="margin:0;">Подтверждение</h3>
+            <p class="muted" style="margin-top:10px;line-height:1.45;">Отправить утреннюю рассылку в <b>${n}</b> салон(ов)? Сообщение уйдёт в Telegram привязанным контактам.</p>
+            <div class="actions actions--single" style="margin-top:16px;">
+              <button class="btn" type="button" data-action="broadcast-send">Да, отправить</button>
+              <button class="btn-outline" type="button" data-action="broadcast-back" style="margin-top:10px;">Назад</button>
+            </div>
+          </div>
+        </div>`;
+      }
+      const salons = m.salons || [];
+      return `
+        <div class="admin-modal">
+          <button type="button" class="admin-modal-dismiss" data-action="broadcast-close" aria-label="Закрыть"></button>
+          <div class="admin-modal-panel">
+            <h3 class="section-title" style="margin:0;">Рассылка по салонам</h3>
+            <p class="muted" style="margin-top:8px;line-height:1.45;">Выберите салоны и нажмите «Далее».</p>
+            <div style="margin-top:12px;max-height:min(52vh,360px);overflow:auto;display:flex;flex-direction:column;gap:8px;">
+              ${salons.length ? salons.map((s) => {
+        const sid = s.id;
+        const on = m.selected && m.selected[sid];
+        return `
+                <label class="broadcast-salon-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--border);cursor:pointer;background:${on ? 'var(--primary-soft)' : 'var(--surface-soft)'};">
+                  <input type="checkbox" data-action="broadcast-toggle" data-salon-id="${sid}" ${on ? 'checked' : ''} style="width:18px;height:18px;" />
+                  <span style="font-weight:700;">${escapeHtml(s.name || 'Салон')}</span>
+                  ${s.tg_chat == null || String(s.tg_chat).trim() === '' ? '<span class="muted" style="font-size:11px;margin-left:auto;">нет tg_chat</span>' : ''}
+                </label>`;
+      }).join('') : '<div class="muted">Салоны не найдены в базе.</div>'}
+            </div>
+            <div class="actions actions--single" style="margin-top:16px;">
+              <button class="btn" type="button" data-action="broadcast-next" ${!Object.keys(m.selected || {}).length ? 'disabled' : ''}>Далее</button>
+              <button class="btn-outline" type="button" data-action="broadcast-close" style="margin-top:10px;">Отмена</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function openBroadcastModal() {
+      try {
+        const res = await fetch('/api/admin/salons-list', { headers: initDataHeaders() });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Не удалось загрузить салоны');
+        const salons = data.salons || [];
+        const selected = {};
+        state.broadcastModal = { step: 'pick', salons, selected };
+        render();
+      } catch (e) {
+        showNotice(e.message || 'Ошибка');
+      }
+    }
+
+    function closeBroadcastModal() {
+      state.broadcastModal = null;
+      render();
+    }
+
+    async function sendBroadcast() {
+      const m = state.broadcastModal;
+      if (!m || m.step !== 'confirm') return;
+      const ids = Object.keys(m.selected || {}).map((x) => Number(x));
+      state.broadcastModal = null;
+      state.adminBlockingMessage = 'Отправляем рассылку…';
+      render();
+      try {
+        const res = await fetch('/api/admin/broadcast', {
+          method: 'POST',
+          headers: initDataHeaders(),
+          body: JSON.stringify({ salon_ids: ids }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
+        showNotice(`Рассылка отправлена: ${data.sent ?? 0} из ${ids.length}`);
+      } catch (e) {
+        showNotice(e.message || 'Ошибка');
+      } finally {
+        state.adminBlockingMessage = null;
+        render();
+      }
     }
 
     async function revisionRespond(requestId, decision) {
@@ -3297,7 +3543,7 @@
               ${logo}
               <div class="header-brand-text">
                 <div class="eyebrow">${sub}</div>
-                <h1 class="title">Личный кабинет Админ</h1>
+                <h1 class="title">Личный кабинет ${goldStarSvg}</h1>
               </div>
             </div>
             ${salonCorner}
@@ -3360,11 +3606,21 @@
       `;
     }
 
+    function productLineTotalRub(item) {
+      const k = String(item.id);
+      let q = state.cart[item.id] || state.cart[k] || 0;
+      if (state.qtyDraft[k] !== undefined) {
+        const p = parseInt(String(state.qtyDraft[k]).replace(/\D/g, ''), 10);
+        if (Number.isFinite(p)) q = p;
+      }
+      const pr = Number(item.price) || 0;
+      return Math.round(pr * q);
+    }
+
     function renderProductCard(item) {
       const inCart = productInCart(item.id);
-      return `
-        <article class="product-card ${item.available ? '' : 'out'}">
-          <div class="product-row">
+      const lineTot = inCart ? money(productLineTotalRub(item)) : '';
+      const mainBlock = `
             <img class="thumb" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" data-action="open-product" data-id="${item.id}" />
             <div class="product-main">
               <div class="product-top">
@@ -3372,12 +3628,18 @@
                   <h4 class="product-name">${escapeHtml(item.name)}</h4>
                   <div class="muted">${productStockLine(item)}</div>
                 </div>
-                <span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>
+                ${inCart
+        ? `<div class="product-line-total">${lineTot}</div>`
+        : `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>`}
               </div>
               <div class="product-price">${escapeHtml(item.price_label)}</div>
-            </div>
-          </div>
-          <div class="actions actions--single">
+            </div>`;
+      return `
+        <article class="product-card ${item.available ? '' : 'out'}">
+          ${inCart
+        ? `<div class="product-card-head"><div class="product-row">${mainBlock}</div><div class="product-trash-rail">${renderTrashBare(item.id)}</div></div>`
+        : `<div class="product-row">${mainBlock}</div>`}
+          <div class="product-card-qty-bottom">
             ${inCart
               ? renderQtyStepper(item, 'card')
               : item.available && canSalonOrder()
@@ -3406,12 +3668,17 @@
             <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" />
           </div>
           <div class="panel">
-            <div class="product-top">
-              <div>
-                <h2 class="title" style="font-size:26px;">${escapeHtml(item.name)}</h2>
-                <div class="muted" style="margin-top:8px;">${productStockLine(item)}</div>
+            <div class="product-detail-head">
+              <div class="product-top">
+                <div>
+                  <h2 class="title" style="font-size:26px;">${escapeHtml(item.name)}</h2>
+                  <div class="muted" style="margin-top:8px;">${productStockLine(item)}</div>
+                </div>
+                ${inCartUi
+        ? `<div class="product-line-total" style="font-size:18px;">${money(productLineTotalRub(item))}</div>`
+        : `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>`}
               </div>
-              <span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>
+              ${inCartUi ? `<div class="product-trash-rail">${renderTrashBare(item.id)}</div>` : ''}
             </div>
             <div class="detail-grid">
               <div class="detail-card">
@@ -3431,7 +3698,7 @@
                 <div class="detail-value">${item.stock} своб.${Number(item.reserved_pending) > 0 ? ` · ${item.reserved_pending} в заявках` : ''}</div>
               </div>
             </div>
-            <div class="actions actions--single" style="margin-top:16px;">
+            <div class="product-card-qty-bottom" style="margin-top:16px;">
               ${inCartUi
                 ? renderQtyStepper(item, 'card')
                 : item.available && canSalonOrder()
@@ -3469,10 +3736,11 @@
                         </div>
                         <div style="font-weight:700;">${money(item.total)}</div>
                       </div>
-                      <div class="cart-qty-wrap">
-                        ${renderQtyStepper(item, 'cart')}
-                      </div>
                     </div>
+                    <div class="cart-trash-rail">${renderTrashBare(item.id)}</div>
+                  </div>
+                  <div class="cart-qty-wrap cart-qty-bottom">
+                    ${renderQtyStepper(item, 'cart')}
                   </div>
                 </article>
               `).join('')}
@@ -3502,7 +3770,7 @@
             <p class="muted" style="margin-top:6px;line-height:1.45;">Проверьте состав и дату поставки, затем отправьте заявку.</p>
             <div class="checkout-date-row-ui">
               <div class="checkout-date-text-block">
-                <span class="checkout-muted-label">Желаемая дата</span>
+                <span class="checkout-muted-label">Дата поставки</span>
                 <div class="checkout-date-main">
                   ${humanDate ? `<strong>${escapeHtml(humanDate)}</strong>` : '—'}
                   ${dowFull ? `<span class="checkout-dow-inline"> (${escapeHtml(dowFull)})</span>` : ''}
@@ -3534,19 +3802,35 @@
       `;
     }
 
+    function requestItemsSnapshotKey(items) {
+      const rows = (items || []).map((r) => [
+        String(r.id ?? ''),
+        Number(r.qty || r.quantity || 0),
+        Number(String(r.price ?? '').replace(',', '.')) || 0,
+      ]);
+      rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+      return JSON.stringify(rows);
+    }
+
     function buildClientRequestDetailsInner(item) {
       const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
       const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
       const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
       const dWeek = dIso ? weekdayFullRu(dIso) : '';
+      const prevItems = item.previous_items || [];
+      const curItems = item.items || [];
+      const prevD = item.previous_delivery_date ? String(item.previous_delivery_date).slice(0, 10) : '';
+      const dateChanged = item.status === 'change_requested' && prevD && prevD !== dIso;
+      const itemsChanged = item.status === 'change_requested' && prevItems.length > 0
+        && requestItemsSnapshotKey(prevItems) !== requestItemsSnapshotKey(curItems);
       const createdLine = item.created_at
         ? `<div class="admin-created-line muted">Создана: ${escapeHtml(formatAdminShortDate(item.created_at))} · ${escapeHtml(formatAdminTime(item.created_at))}</div>`
         : '';
 
-      const clientRevision = item.status === 'change_requested' && (item.previous_items || []).length
+      const clientRevision = item.status === 'change_requested'
         ? `
                 <div class="revision-banner" style="margin-top:12px;">
-                  <b>Менеджер внёс изменения.</b> Примите новый состав или отклоните заявку целиком.
+                  <b>Менеджер внёс изменения.</b> Ниже — актуальное предложение. Примите или отклоните.
                   ${item.manager_note ? `<div style="margin-top:8px;">${escapeHtml(item.manager_note)}</div>` : ''}
                 </div>
                 <div class="revision-actions">
@@ -3579,9 +3863,16 @@
               </div>
               ${dHuman ? `
               <div class="request-date-banner">
-                <span class="lbl">Желаемая дата</span>
+                <span class="lbl">Дата поставки</span>
                 <span><b>${escapeHtml(dHuman)}</b>${dWeek ? ` (${escapeHtml(dWeek)})` : ''}</span>
               </div>` : ''}
+              ${dateChanged && prevD ? `<div class="muted" style="margin-top:8px;font-size:13px;">Ранее была дата: <b>${escapeHtml(formatCheckoutDateShort(prevD))}</b></div>` : ''}
+              ${item.status === 'change_requested' && itemsChanged && prevItems.length ? `
+              <div style="margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--surface-soft);font-size:13px;line-height:1.4;">
+                <div style="font-weight:800;margin-bottom:6px;">Было в заявке</div>
+                ${prevItems.map((row) => `<div>${escapeHtml(row.name)} — ${Number(row.qty || row.quantity || 0)} шт · ${requestLineMoney(row)}</div>`).join('')}
+              </div>` : ''}
+              ${item.status === 'change_requested' ? `<div style="margin-top:10px;font-weight:800;font-size:13px;">Сейчас в заявке</div>` : ''}
               <div class="request-lines-grid">
                 ${(item.items || []).map((row) => `
                   <div class="request-line-row">
@@ -3634,7 +3925,7 @@
               </div>
               ${dHuman ? `
               <div class="request-date-banner">
-                <span class="lbl">Желаемая дата</span>
+                <span class="lbl">Дата поставки</span>
                 <span><b>${escapeHtml(dHuman)}</b>${dWeek ? ` (${escapeHtml(dWeek)})` : ''}</span>
               </div>` : ''}
               <div class="request-lines-grid">
@@ -3688,12 +3979,11 @@
               <div class="profile-top">
                 <div class="profile-avatar" style="background:var(--primary-soft);color:var(--primary);">${iconNav.admin}</div>
                 <div>
-                  <div class="product-name">Личный кабинет Админ</div>
+                  <div class="product-name">Личный кабинет ${goldStarSvg}</div>
                   <div class="muted">Blossom Flower Farm · режим администратора</div>
                 </div>
               </div>
-              <p class="muted" style="margin-top:14px;line-height:1.45;">Салон не привязан — оформление заявок как у клиента недоступно. Все заявки и каталог — во вкладке «Админ».</p>
-              ${state.telegramId ? `<p class="muted" style="margin-top:12px;font-size:12px;line-height:1.4;">Вкладка «Админ»: ваш Telegram ID должен совпадать с <b>ADMIN_CHAT_ID</b> (если заявки приходят вам в личку боту — это тот же числовой id), либо задайте <b>ADMIN_TELEGRAM_IDS</b> / <b>ADMIN_TELEGRAM_ID</b>.</p>` : ''}
+              <p class="muted" style="margin-top:14px;line-height:1.45;">Салон не привязан — оформление заявок как у клиента недоступно. Заявки и каталог — во вкладках ниже.</p>
             </div>
           </section>`;
         }
@@ -3709,8 +3999,7 @@
           <div class="admin-profile-strip">
             <span class="admin-profile-strip__icon" aria-hidden="true">${iconNav.admin}</span>
             <div>
-              <p class="admin-profile-strip__title">Личный кабинет Админ</p>
-              <p class="admin-profile-strip__text">Ниже — ваш салон как клиент Blossom. Заявки всех клиентов — во вкладке «Заявки», каталог в базе — в «Админ».</p>
+              <p class="admin-profile-strip__title">Личный кабинет ${goldStarSvg}</p>
             </div>
           </div>` : ''}
           <div class="profile-card">
@@ -4067,6 +4356,7 @@
                 </div>
               `).join('')}
               <button class="btn" type="button" data-action="admin-save-catalog" style="width:100%;margin-top:18px;">Сохранить в базе</button>
+              <button class="btn-outline" type="button" data-action="broadcast-open" style="width:100%;margin-top:10px;">Отправка рассылки</button>
             </div>
           </section>
         `;
@@ -4208,6 +4498,7 @@
         </div>
         ${renderAdminEditorModal()}
         ${renderRejectModal()}
+        ${renderBroadcastModal()}
       `;
 
       syncQtyInputsFromState(app);
@@ -4389,6 +4680,35 @@
       if (action === 'revision-accept') {
         await revisionRespond(Number(id), 'accept');
       }
+      if (action === 'broadcast-open') {
+        await openBroadcastModal();
+      }
+      if (action === 'broadcast-close') {
+        closeBroadcastModal();
+      }
+      if (action === 'broadcast-back') {
+        if (state.broadcastModal) state.broadcastModal.step = 'pick';
+        render();
+      }
+      if (action === 'broadcast-next') {
+        if (state.broadcastModal && Object.keys(state.broadcastModal.selected || {}).length) {
+          state.broadcastModal.step = 'confirm';
+          render();
+        }
+      }
+      if (action === 'broadcast-toggle') {
+        const sid = target.dataset.salonId;
+        if (state.broadcastModal && sid != null) {
+          const k = String(sid);
+          if (!state.broadcastModal.selected) state.broadcastModal.selected = {};
+          if (state.broadcastModal.selected[k]) delete state.broadcastModal.selected[k];
+          else state.broadcastModal.selected[k] = true;
+          render();
+        }
+      }
+      if (action === 'broadcast-send') {
+        await sendBroadcast();
+      }
     });
 
     function escapeHtml(value) {
@@ -4430,6 +4750,7 @@
     );
 
     async function init() {
+      startBootSplashPhraseLoop();
       render();
       window.setTimeout(() => {
         const splash = document.getElementById('boot-splash');

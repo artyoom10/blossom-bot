@@ -29,7 +29,10 @@ REQUESTS_SELECT_FULL = (
     "id,status,salon_id,salon_name,total_amount,total_stems,items,created_at,updated_at,manager_note,previous_items,"
     "delivery_date,previous_delivery_date"
 )
-REQUESTS_SELECT_BASIC = "id,status,salon_id,salon_name,total_amount,total_stems,items,created_at,updated_at"
+REQUESTS_SELECT_BASIC = (
+    "id,status,salon_id,salon_name,total_amount,total_stems,items,created_at,updated_at,"
+    "manager_note,previous_items,delivery_date,previous_delivery_date"
+)
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -525,7 +528,7 @@ def format_delivery_line(request_row: Dict[str, Any]) -> str:
     s = format_date_ru_long(d)
     if not s:
         return ""
-    return f"Желаемая дата поставки: <b>{html.escape(s)}</b>\n"
+    return f"Дата поставки: <b>{html.escape(s)}</b>\n"
 
 
 def build_client_order_details_message(request_row: Dict[str, Any], title: str) -> str:
@@ -626,9 +629,18 @@ def notify_client(request_row: Dict[str, Any], action: str) -> None:
         )
         tg_send_message(telegram_user_id, text)
         return
-    if action == "change_requested" and request_row.get("previous_items"):
+    if action == "change_requested":
         text = build_revision_diff_message(request_row)
-        tg_send_message(telegram_user_id, text)
+        rid = request_row.get("id")
+        buttons = None
+        if rid is not None:
+            buttons = [
+                [
+                    {"text": "✅ Принять", "callback_data": f"crev:{rid}:a"},
+                    {"text": "❌ Отклонить", "callback_data": f"crev:{rid}:r"},
+                ],
+            ]
+        tg_send_message(telegram_user_id, text, buttons)
         return
     if action == "rejected":
         note = str(request_row.get("manager_note") or "").strip()
@@ -644,7 +656,6 @@ def notify_client(request_row: Dict[str, Any], action: str) -> None:
         )
         return
     texts = {
-        "change_requested": "✏️ Менеджер предложил изменить заявку. Откройте приложение, чтобы увидеть детали.",
         "cancelled_by_client": "Заявка отменена вами.",
     }
     text = texts.get(action)
@@ -1420,41 +1431,32 @@ def api_admin_requests_list():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
-@app.post("/api/request/revision-response")
-def api_revision_response():
-    error = ensure_env()
-    if error:
-        return jsonify({"ok": False, "error": error}), 500
-
-    payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
-    request_id = payload.get("request_id")
-    decision = (payload.get("decision") or "").strip().lower()
-    if not telegram_id or not request_id:
-        return jsonify({"ok": False, "error": "telegram_id and request_id are required"}), 400
-    if decision not in {"accept", "reject"}:
-        return jsonify({"ok": False, "error": "decision must be accept or reject"}), 400
-
+def _revision_response_apply(request_id: int, telegram_id: str, decision: str) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """
+    Возвращает (updated_row, error_key).
+    error_key: request_not_found, forbidden, not_awaiting_client_response, no_previous_items, patch_failed, internal
+    """
     try:
         row = load_request_by_id(request_id)
         if not row:
-            return jsonify({"ok": False, "error": "request_not_found"}), 404
+            return None, "request_not_found"
         if str(row.get("telegram_user_id")) != str(telegram_id):
-            return jsonify({"ok": False, "error": "forbidden"}), 403
+            return None, "forbidden"
         if row.get("status") != "change_requested":
-            return jsonify({"ok": False, "error": "not_awaiting_client_response"}), 400
+            return None, "not_awaiting_client_response"
 
         if decision == "accept":
             patch_body: Dict[str, Any] = {
                 "status": "approved",
                 "previous_items": None,
+                "previous_delivery_date": None,
                 "manager_note": None,
                 "updated_at": now_iso(),
             }
         else:
             prev = row.get("previous_items") or []
             if not prev:
-                return jsonify({"ok": False, "error": "no_previous_items"}), 400
+                return None, "no_previous_items"
             total_amount, total_stems = totals_from_items(prev)
             patch_body = {
                 "items": prev,
@@ -1465,6 +1467,10 @@ def api_revision_response():
                 "total_stems": total_stems,
                 "updated_at": now_iso(),
             }
+            pd_prev = row.get("previous_delivery_date")
+            if pd_prev:
+                patch_body["delivery_date"] = str(pd_prev)[:10]
+                patch_body["previous_delivery_date"] = None
 
         upd = supabase_patch(
             REQUESTS_TABLE,
@@ -1473,7 +1479,7 @@ def api_revision_response():
             prefer_return=True,
         )
         if not upd.ok:
-            return jsonify({"ok": False, "error": upd.text}), 500
+            return None, "patch_failed"
         updated = (upd.json() or [row])[0]
 
         salon_label = html.escape(str(updated.get("salon_name") or "Салон"))
@@ -1504,7 +1510,124 @@ def api_revision_response():
                 f"Заявка <b>#{html.escape(str(request_id))}</b> снова на рассмотрении в прежнем виде.",
             )
 
+        return updated, None
+    except Exception:
+        return None, "internal"
+
+
+@app.post("/api/request/revision-response")
+def api_revision_response():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+
+    payload = request.get_json(silent=True) or {}
+    telegram_id = payload.get("telegram_id")
+    request_id = payload.get("request_id")
+    decision = (payload.get("decision") or "").strip().lower()
+    if not telegram_id or not request_id:
+        return jsonify({"ok": False, "error": "telegram_id and request_id are required"}), 400
+    if decision not in {"accept", "reject"}:
+        return jsonify({"ok": False, "error": "decision must be accept or reject"}), 400
+
+    try:
+        updated, err = _revision_response_apply(int(request_id), str(telegram_id), decision)
+        if err:
+            code = (
+                404
+                if err == "request_not_found"
+                else 403
+                if err == "forbidden"
+                else 500
+                if err in ("patch_failed", "internal")
+                else 400
+            )
+            return jsonify({"ok": False, "error": err}), code
         return jsonify({"ok": True, "request": updated})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+def load_all_salons_for_broadcast() -> List[Dict[str, Any]]:
+    for sel in ("id,name,contact_name,tg_chat", "id,name,tg_chat"):
+        r = supabase_get("salons", {"select": sel, "order": "id.asc"})
+        if r.ok:
+            return r.json() or []
+    return []
+
+
+def build_morning_broadcast_text(salon: Dict[str, Any]) -> str:
+    nm = str(salon.get("contact_name") or salon.get("name") or "коллега").strip()
+    flowers = load_flower_types()
+    lines: List[str] = []
+    for f in flowers:
+        if not flower_catalog_visible(f):
+            continue
+        name = str(f.get("name") or "Цветок")
+        stock = flower_effective_stock(f)
+        if stock <= 0:
+            continue
+        lines.append(f"— {html.escape(name)} — {stock} стеблей")
+    body = "\n".join(lines) if lines else "— Актуальные позиции смотрите в мини-приложении."
+    return (
+        f"Доброе утро, {html.escape(nm)} ☀️\n\n"
+        "Свежие цветы на сегодня уже готовы к заказу:\n\n"
+        f"{body}\n\n"
+        "Заявку можно оформить в мини-приложении или по кнопке ниже.\n"
+        "Хорошего дня! 🤗"
+    )
+
+
+@app.get("/api/admin/salons-list")
+def api_admin_salons_list():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    try:
+        rows = load_all_salons_for_broadcast()
+        return jsonify({"ok": True, "salons": rows})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.post("/api/admin/broadcast")
+def api_admin_broadcast():
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    payload = request.get_json(silent=True) or {}
+    salon_ids = payload.get("salon_ids") or []
+    if not isinstance(salon_ids, list) or not salon_ids:
+        return jsonify({"ok": False, "error": "salon_ids required"}), 400
+    try:
+        rows = load_all_salons_for_broadcast()
+        by_id: Dict[Any, Dict[str, Any]] = {x.get("id"): x for x in rows}
+        base = miniapp_base_url_for_request()
+        buttons: Optional[List[List[Dict[str, Any]]]] = None
+        if base:
+            buttons = [[{"text": "Открыть мини-приложение", "web_app": {"url": f"{base.rstrip('/')}/miniapp"}}]]
+        sent = 0
+        for sid in salon_ids:
+            try:
+                i = int(sid)
+            except (TypeError, ValueError):
+                continue
+            salon = by_id.get(i)
+            if not salon:
+                continue
+            tg_chat = salon.get("tg_chat")
+            if tg_chat is None or str(tg_chat).strip() == "":
+                continue
+            text = build_morning_broadcast_text(salon)
+            tg_send_message(tg_chat, text, buttons)
+            sent += 1
+        return jsonify({"ok": True, "sent": sent})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -1520,6 +1643,47 @@ def webhook():
     data = callback_query.get("data") or ""
     message = callback_query.get("message") or {}
     admin_message_id = message.get("message_id")
+
+    if data.startswith("crev:"):
+        try:
+            _, raw_request_id, short = data.split(":", 2)
+        except ValueError:
+            if callback_id:
+                tg_answer_callback(callback_id, "Неверное действие")
+            return jsonify({"ok": True})
+        if short not in ("a", "r"):
+            if callback_id:
+                tg_answer_callback(callback_id, "Неизвестное действие")
+            return jsonify({"ok": True})
+        from_user = (callback_query.get("from") or {}).get("id")
+        if not from_user:
+            if callback_id:
+                tg_answer_callback(callback_id, "Ошибка")
+            return jsonify({"ok": True})
+        decision = "accept" if short == "a" else "reject"
+        updated, err = _revision_response_apply(int(raw_request_id), str(from_user), decision)
+        err_answers = {
+            "forbidden": "Это не ваша заявка",
+            "request_not_found": "Заявка не найдена",
+            "not_awaiting_client_response": "Заявка уже обработана",
+            "no_previous_items": "Не удалось восстановить состав",
+            "patch_failed": "Ошибка сохранения",
+            "internal": "Ошибка обработки",
+        }
+        if err:
+            if callback_id:
+                tg_answer_callback(callback_id, err_answers.get(err, "Ошибка"))
+            return jsonify({"ok": True})
+        if callback_id:
+            tg_answer_callback(callback_id, "Готово")
+        chat_uid = message.get("chat", {}).get("id")
+        mid = message.get("message_id")
+        if chat_uid and mid:
+            try:
+                tg_clear_buttons(chat_uid, mid)
+            except Exception:
+                pass
+        return jsonify({"ok": True})
 
     if not data.startswith("req:"):
         if callback_id:
