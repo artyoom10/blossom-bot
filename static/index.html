@@ -308,7 +308,11 @@
     .detail-value { margin-top: 6px; font-size: 15px; font-weight: 700; }
 
     .cart-item {
-      padding: 14px;
+      padding: 10px 12px;
+    }
+    .cart-item .product-top {
+      margin-bottom: 0;
+      align-items: flex-start;
     }
     .cart-row {
       display: flex;
@@ -387,13 +391,133 @@
       white-space: normal;
       word-break: break-word;
     }
+    .admin-req-meta .request-status {
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .request-status.new { background: #edf7f2; color: var(--primary); }
     .request-status.change_requested { background: #fff4e5; color: #b54708; }
     .request-status.approved { background: #eaf6ee; color: #137333; }
     .request-status.rejected, .request-status.cancelled_by_client, .request-status.rejected_by_client { background: #fff1f1; color: var(--danger); }
 
     .request-card {
-      padding: 16px 16px 18px;
+      padding: 14px 14px 16px;
+    }
+    .request-card-headline {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .request-card-headline .request-id {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .request-card-headline .request-time {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .request-stat-strip {
+      display: flex;
+      align-items: stretch;
+      margin-top: 12px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+    .request-stat-cell {
+      flex: 1;
+      padding: 10px 12px;
+      text-align: center;
+    }
+    .request-stat-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .request-stat-val {
+      display: block;
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .request-stat-cell:first-child .request-stat-val {
+      color: var(--primary);
+    }
+    .request-stat-div {
+      width: 1px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .request-date-banner {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .request-date-banner .lbl {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .request-lines-grid {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .request-line-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 14px;
+      background: var(--surface-soft);
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+    .request-line-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      object-fit: cover;
+      background: #e8ecf0;
+      flex-shrink: 0;
+    }
+    .request-line-main {
+      min-width: 0;
+      flex: 1;
+    }
+    .request-line-name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .request-line-qty {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .request-line-price {
+      font-size: 14px;
+      font-weight: 800;
+      flex-shrink: 0;
     }
     .request-card-top {
       display: flex;
@@ -710,7 +834,7 @@
       align-items: center;
       gap: 8px;
       width: 100%;
-      margin-top: 12px;
+      margin-top: 8px;
     }
     .qty-stepper--cart {
       margin-top: 0;
@@ -758,7 +882,7 @@
       display: flex;
       align-items: stretch;
       gap: 8px;
-      margin-top: 12px;
+      margin-top: 6px;
       width: 100%;
       max-width: 100%;
       min-width: 0;
@@ -1068,10 +1192,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
       opacity: 0;
       visibility: hidden;
-      transition: opacity 0.45s ease, visibility 0.45s ease;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+      background: rgba(15, 23, 42, 0.48);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
     }
     .global-overlay-root:not(:empty) {
       pointer-events: auto;
@@ -1080,20 +1207,29 @@
     }
     .order-success-overlay {
       width: 100%;
-      height: 100%;
+      max-height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(246, 247, 248, .97);
-      animation: order-success-bg 0.45s ease;
+      animation: order-success-bg 0.35s ease;
     }
     @keyframes order-success-bg {
       from { opacity: 0; }
       to { opacity: 1; }
     }
+    .order-success-panel {
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 26px 22px 24px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+      text-align: center;
+    }
     .order-success-card {
       text-align: center;
-      max-width: 280px;
+      max-width: none;
     }
     .order-success-icon-wrap {
       width: 92px;
@@ -1178,12 +1314,14 @@
     }
     .product-card .actions.actions--single {
       align-items: center;
+      margin-top: 8px;
     }
     .product-card .qty-stepper {
       justify-content: center;
       margin-left: auto;
       margin-right: auto;
       max-width: 300px;
+      margin-top: 6px;
     }
     .catalog-loading-screen {
       min-height: 180px;
@@ -1226,6 +1364,178 @@
       background: var(--surface);
       color: var(--text);
       box-sizing: border-box;
+    }
+    .checkout-date-row-ui {
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+    }
+    .checkout-date-text-block {
+      flex: 1;
+      min-width: 0;
+    }
+    .checkout-muted-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .checkout-date-main {
+      margin-top: 4px;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+    .checkout-date-main strong {
+      font-weight: 800;
+    }
+    .checkout-dow-inline {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .checkout-edit-date-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .checkout-edit-date-btn svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+    .checkout-hidden-date {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+      left: 0;
+      top: 0;
+    }
+    .checkout-items-label {
+      margin-top: 18px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .checkout-items {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .checkout-item-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+    }
+    .checkout-item-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #e8ecf0;
+    }
+    .checkout-item-mid {
+      flex: 1;
+      min-width: 0;
+    }
+    .checkout-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .checkout-item-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      font-weight: 600;
+    }
+    .checkout-item-sum {
+      font-size: 15px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+    .checkout-totals-strip {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .checkout-total-pill {
+      flex: 1;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .checkout-total-pill span {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .checkout-total-pill strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .checkout-total-pill--sum strong {
+      color: var(--primary);
+    }
+    .request-mini-status {
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .request-mini-status.change_requested { color: #b54708; }
+    .request-mini-status.approved { color: #137333; }
+    .request-mini-status.rejected,
+    .request-mini-status.cancelled_by_client,
+    .request-mini-status.rejected_by_client { color: var(--danger); }
+    .order-success-panel .action-overlay-spinner {
+      margin: 0 auto 16px;
+    }
+    .order-success-panel .order-success-icon-wrap {
+      margin-bottom: 16px;
+    }
+    .order-success-panel .action-overlay-error-icon {
+      margin: 0 auto 14px;
     }
     .admin-req-card-head {
       display: flex;
@@ -1386,6 +1696,7 @@
 
     let actionOverlayTimer = null;
     const lockIconSvg = '<svg class="stock-lock-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>';
+    const pencilIconSvg = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
 
     function formatLongDateRu(iso) {
       if (!iso || String(iso).length < 10) return '';
@@ -1527,8 +1838,8 @@
       return `
         <div class="qty-stepper${extra}">
           <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 5" onmousedown="event.preventDefault()">−</button>
-          <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-            data-action="qty-input" data-id="${id}" value="${escapeAttr(displayVal)}" aria-label="Количество стеблей" />
+          <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-lpignore="true"
+            data-action="qty-input" data-id="${id}" value="${escapeAttr(displayVal)}" aria-label="Количество стеблей" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
           <button type="button" class="icon-btn qty-step" data-action="qty-plus" data-id="${id}" aria-label="Добавить 5" onmousedown="event.preventDefault()">+</button>
           <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
         </div>
@@ -1636,6 +1947,17 @@
     function productInCart(id) {
       const k = String(id);
       return (state.cart[id] || state.cart[k] || 0) > 0 || state.qtyDraft[k] !== undefined;
+    }
+
+    function productThumbUrl(productId) {
+      const p = state.products.find((x) => String(x.id) === String(productId));
+      return (p && p.image) ? p.image : '/miniapp/blossom_logo.png';
+    }
+
+    function requestLineMoney(row) {
+      const q = Number(row.qty) || 0;
+      const pr = Number(row.price) || 0;
+      return money(q * pr);
     }
 
     function initDataHeaders(extra = {}) {
@@ -2196,7 +2518,7 @@
           sub: 'Менеджер увидит её в Telegram',
         };
         render();
-        await sleep(4200);
+        await sleep(3200);
         state.actionOverlay = null;
         showNotice('Заявка отправлена менеджеру');
       } catch (err) {
@@ -2524,41 +2846,44 @@
     }
 
     function renderCheckout() {
+      const items = cartItems();
       const dd = state.deliveryDate || new Date().toISOString().slice(0, 10);
       const humanDate = formatCheckoutDateShort(dd);
       const dowFull = weekdayFullRu(dd);
       return `
         <section class="stack">
-          <div class="panel">
+          <div class="panel checkout-panel">
             <h2 class="section-title">Оформление заявки</h2>
-            <div class="muted" style="margin-top:6px;">После отправки менеджер получит заявку и ответит в Telegram.</div>
-            <label class="detail-label" style="display:block;margin-top:16px;">Желаемая дата поставки</label>
-            <div class="checkout-date-block">
-              ${humanDate ? `<div class="checkout-date-human">${escapeHtml(humanDate)}</div>` : ''}
-              <div class="checkout-date-picker-wrap">
-                <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" />
+            <p class="muted" style="margin-top:6px;line-height:1.45;">Проверьте состав и дату, затем отправьте заявку системной кнопкой Telegram внизу.</p>
+            <div class="checkout-date-row-ui">
+              <div class="checkout-date-text-block">
+                <span class="checkout-muted-label">Желаемая дата</span>
+                <div class="checkout-date-main">
+                  ${humanDate ? `<strong>${escapeHtml(humanDate)}</strong>` : '—'}
+                  ${dowFull ? `<span class="checkout-dow-inline"> (${escapeHtml(dowFull)})</span>` : ''}
+                </div>
               </div>
-              ${dowFull ? `<div class="checkout-dow" data-checkout-dow style="margin-top:8px;">${escapeHtml(dowFull)}</div>` : ''}
+              <input type="date" data-checkout-delivery class="checkout-hidden-date" value="${escapeAttr(dd)}" tabindex="-1" aria-hidden="true" />
+              <button type="button" class="checkout-edit-date-btn" data-action="checkout-pick-date">${pencilIconSvg}<span>Изменить</span></button>
             </div>
-            <div class="detail-grid" style="margin-top:16px;">
-              <div class="detail-card">
-                <div class="detail-label">Салон</div>
-                <div class="detail-value">${escapeHtml(state.salon?.name || 'Не привязан')}</div>
-              </div>
-              <div class="detail-card">
-                <div class="detail-label">Сумма</div>
-                <div class="detail-value">${money(cartTotal())}</div>
-              </div>
-              <div class="detail-card">
-                <div class="detail-label">Стеблей</div>
-                <div class="detail-value">${cartCount()}</div>
-              </div>
-              <div class="detail-card">
-                <div class="detail-label">Статус</div>
-                <div class="detail-value">Ожидает отправки</div>
-              </div>
+            <div class="checkout-items-label">Состав заявки</div>
+            <div class="checkout-items">
+              ${items.map((line) => `
+                <div class="checkout-item-row">
+                  <img class="checkout-item-thumb" src="${escapeAttr(line.image)}" alt="" loading="lazy" decoding="async" />
+                  <div class="checkout-item-mid">
+                    <div class="checkout-item-name">${escapeHtml(line.name)}</div>
+                    <div class="checkout-item-meta">${line.qty} шт · ${escapeHtml(line.price_label)}</div>
+                  </div>
+                  <div class="checkout-item-sum">${money(line.total)}</div>
+                </div>
+              `).join('')}
             </div>
-            <div class="success" style="margin-top:16px;">Нажмите системную кнопку Telegram снизу, чтобы отправить заявку.</div>
+            <div class="checkout-totals-strip">
+              <div class="checkout-total-pill"><span>Стеблей</span><strong>${cartCount()}</strong></div>
+              <div class="checkout-total-pill checkout-total-pill--sum"><span>Итого</span><strong>${money(cartTotal())}</strong></div>
+            </div>
+            <div class="success" style="margin-top:14px;">Нажмите системную кнопку Telegram снизу, чтобы отправить заявку.</div>
           </div>
         </section>
       `;
@@ -2587,25 +2912,44 @@
           ${!state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
           ${state.requests.map((item) => {
             const st = item.status || '';
-            const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
             const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
+            const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
+            const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
+            const dWeek = dIso ? weekdayFullRu(dIso) : '';
             return `
             <article class="request-card">
-              <div class="request-card-top">
-                <div class="request-card-top-left">
-                  <div class="product-name">Заявка #${item.id}</div>
-                  <div class="muted" style="margin-top:4px;">${escapeHtml(item.salon_name || 'Салон')}</div>
+              <div class="request-card-headline">
+                <span class="request-id">Заявка #${item.id}</span>
+                <span class="request-time">${formatAdminTime(item.created_at)}</span>
+              </div>
+              ${st && st !== 'new' ? `<div class="request-mini-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</div>` : ''}
+              <div class="request-stat-strip">
+                <div class="request-stat-cell">
+                  <span class="request-stat-label">Стеблей</span>
+                  <span class="request-stat-val">${item.total_stems || 0}</span>
                 </div>
-                <div class="request-card-meta">
-                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</span>
-                  <div class="muted" style="font-size:12px;font-weight:600;">${formatAdminTime(item.created_at)}</div>
+                <div class="request-stat-div" aria-hidden="true"></div>
+                <div class="request-stat-cell">
+                  <span class="request-stat-label">Сумма</span>
+                  <span class="request-stat-val">${money(item.total_amount || 0)}</span>
                 </div>
               </div>
-              <div class="request-stems-hero">${item.total_stems || 0}<span>стеблей</span></div>
-              <div class="request-sum-line">${money(item.total_amount || 0)}</div>
-              ${dd ? `<div class="request-delivery-line">Поставка: <b>${escapeHtml(dd)}</b></div>` : ''}
-              <div class="request-items-list">
-                ${(item.items || []).map((row) => `• ${escapeHtml(row.name)} — ${row.qty} шт`).join('<br/>')}
+              ${dHuman ? `
+              <div class="request-date-banner">
+                <span class="lbl">Желаемая дата</span>
+                <span><b>${escapeHtml(dHuman)}</b>${dWeek ? ` (${escapeHtml(dWeek)})` : ''}</span>
+              </div>` : ''}
+              <div class="request-lines-grid">
+                ${(item.items || []).map((row) => `
+                  <div class="request-line-row">
+                    <img class="request-line-thumb" src="${escapeAttr(productThumbUrl(row.id))}" alt="" loading="lazy" decoding="async" />
+                    <div class="request-line-main">
+                      <div class="request-line-name">${escapeHtml(row.name)}</div>
+                      <div class="request-line-qty">${row.qty} шт</div>
+                    </div>
+                    <div class="request-line-price">${requestLineMoney(row)}</div>
+                  </div>
+                `).join('')}
               </div>
               ${note ? `<div class="request-cancel-note"><b>Комментарий менеджера:</b><br/>${note}</div>` : ''}
               ${item.status === 'change_requested' && (item.previous_items || []).length ? `
@@ -2955,7 +3299,7 @@
       if (ov.phase === 'loading') {
         return `
         <div class="order-success-overlay" aria-live="polite">
-          <div class="order-success-card">
+          <div class="order-success-panel order-success-card">
             <div class="action-overlay-spinner"></div>
             <p class="action-overlay-loading-text">${escapeHtml(ov.loadingText || 'Подождите…')}</p>
           </div>
@@ -2964,7 +3308,7 @@
       if (ov.phase === 'error') {
         return `
         <div class="order-success-overlay" aria-live="polite">
-          <div class="order-success-card">
+          <div class="order-success-panel order-success-card">
             <svg class="action-overlay-error-icon" viewBox="0 0 52 52" aria-hidden="true">
               <circle cx="26" cy="26" r="23" fill="none" stroke="currentColor" stroke-width="2.5"/>
               <path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M18 18l16 16M34 18L18 34"/>
@@ -2980,7 +3324,7 @@
         : '';
       return `
         <div class="order-success-overlay" aria-live="polite">
-          <div class="order-success-card">
+          <div class="order-success-panel order-success-card">
             <div class="order-success-icon-wrap" style="${iconWrapStyle}">
               <svg class="order-success-check" viewBox="0 0 52 52" aria-hidden="true">
                 <circle class="order-success-circle" cx="26" cy="26" r="23" fill="none" stroke="currentColor" stroke-width="2.5"/>
@@ -3105,6 +3449,7 @@
     document.addEventListener('input', (event) => {
       const t = event.target;
       if (t && t.matches && t.matches('[data-action="qty-input"]')) {
+        event.stopPropagation();
         const pid = t.dataset.id;
         if (pid != null) state.qtyDraft[String(pid)] = t.value;
         return;
@@ -3159,6 +3504,18 @@
       }
       if (action === 'remove') {
         changeQty(id, -999999);
+      }
+      if (action === 'checkout-pick-date') {
+        const inp = document.querySelector('[data-checkout-delivery]');
+        if (inp) {
+          try {
+            if (typeof inp.showPicker === 'function') inp.showPicker();
+            else inp.click();
+          } catch (_) {
+            try { inp.click(); } catch (_) {}
+          }
+        }
+        return;
       }
       if (action === 'reload-catalog') {
         await loadProducts(false);
@@ -3251,7 +3608,7 @@
         qtyInputBlurTimer = window.setTimeout(() => {
           qtyInputBlurTimer = null;
           setQtyFromInput(pid, val);
-        }, 450);
+        }, 520);
       },
       true,
     );
