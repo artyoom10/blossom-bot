@@ -765,13 +765,15 @@
     }
     .cart-item .qty-stepper--cart {
       display: grid;
-      grid-template-columns: 40px minmax(0, 1fr) 40px 40px;
+      grid-template-columns: 40px 58px 40px 40px;
       gap: 6px;
       align-items: center;
       width: 100%;
-      max-width: 100%;
+      max-width: 220px;
       min-width: 0;
-      flex: 1;
+      flex: 0 1 auto;
+      margin-left: auto;
+      margin-right: auto;
     }
     .cart-item .qty-stepper--cart .icon-btn {
       width: 40px;
@@ -1058,16 +1060,32 @@
       margin: 0;
     }
 
-    .order-success-overlay {
+    .global-overlay-root {
       position: fixed;
       inset: 0;
       z-index: 280;
-      background: rgba(246, 247, 248, .97);
+      pointer-events: none;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
-      animation: order-success-bg .35s ease;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+    .global-overlay-root:not(:empty) {
+      pointer-events: auto;
+      opacity: 1;
+      visibility: visible;
+    }
+    .order-success-overlay {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(246, 247, 248, .97);
+      animation: order-success-bg 0.45s ease;
     }
     @keyframes order-success-bg {
       from { opacity: 0; }
@@ -1087,7 +1105,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: order-success-pop .55s cubic-bezier(.34, 1.45, .64, 1);
+      animation: order-success-pop 0.65s cubic-bezier(.34, 1.45, .64, 1) both;
     }
     @keyframes order-success-pop {
       from { transform: scale(.35); opacity: 0; }
@@ -1100,12 +1118,12 @@
     .order-success-circle {
       stroke-dasharray: 151;
       stroke-dashoffset: 151;
-      animation: order-success-draw .5s ease forwards;
+      animation: order-success-draw 0.55s ease forwards;
     }
     .order-success-tick {
       stroke-dasharray: 48;
       stroke-dashoffset: 48;
-      animation: order-success-draw .35s .4s ease forwards;
+      animation: order-success-draw 0.4s 0.42s ease forwards;
     }
     @keyframes order-success-draw {
       to { stroke-dashoffset: 0; }
@@ -1149,15 +1167,103 @@
       margin-top: 8px;
     }
     .checkout-dow {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
     }
     .stock-avail-num {
-      font-size: 1.12em;
+      font-size: 1.28em;
       font-weight: 800;
       letter-spacing: -0.02em;
+    }
+    .product-card .actions.actions--single {
+      align-items: center;
+    }
+    .product-card .qty-stepper {
+      justify-content: center;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 300px;
+    }
+    .catalog-loading-screen {
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 32px 20px;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .catalog-loading-screen .action-overlay-spinner {
+      margin: 0;
+    }
+    .checkout-date-block {
+      margin-top: 8px;
+    }
+    .checkout-date-human {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .checkout-date-picker-wrap {
+      display: inline-block;
+      max-width: 100%;
+    }
+    .checkout-date-input {
+      width: auto;
+      min-width: 118px;
+      max-width: 140px;
+      padding: 8px 10px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      border-radius: 12px !important;
+      border: 1px solid var(--border) !important;
+      background: var(--surface);
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    .admin-req-card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .admin-req-card-head .admin-req-top {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-req-delete {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: 1px solid #fecaca;
+      background: #fff8f8;
+      color: var(--danger);
+      cursor: pointer;
+    }
+    .admin-req-delete svg {
+      width: 20px;
+      height: 20px;
+    }
+    .admin-req-card--pulse {
+      animation: admin-card-pulse 0.85s ease;
+    }
+    @keyframes admin-card-pulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(45, 157, 120, 0.45);
+      }
+      100% {
+        box-shadow: 0 0 0 14px rgba(45, 157, 120, 0);
+      }
     }
     .stock-lock-wrap {
       display: inline-flex;
@@ -1208,6 +1314,7 @@
     </div>
   </div>
   <div id="app"></div>
+  <div id="global-overlay" class="global-overlay-root" aria-hidden="true"></div>
 
   <script>
     const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
@@ -1256,7 +1363,15 @@
       /** { phase:'loading'|'success', variant, title?, sub?, loadingText? } | null */
       actionOverlay: null,
       adminSalonFilter: 'all',
+      /** Временная строка в поле количества (пока не зафиксирован blur) */
+      qtyDraft: {},
+      /** Подсветка карточки заявки после действия админа */
+      adminHighlightId: null,
+      /** Тост, отложенный пока виден оверлей */
+      pendingNotice: '',
     };
+
+    let lastOverlaySyncKey = '\x00';
 
     /** В JSON как строка, чтобы не терять точность у длинных Telegram id. */
     function tgIdForApi() {
@@ -1280,6 +1395,19 @@
         const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
         const wd = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
         return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} года (${wd[d.getDay()]})`;
+      } catch (_) {
+        return '';
+      }
+    }
+
+    /** Для оформления заявки: «7 апреля 2026 года» */
+    function formatCheckoutDateShort(iso) {
+      if (!iso || String(iso).length < 10) return '';
+      try {
+        const s = String(iso).slice(0, 10);
+        const d = new Date(`${s}T12:00:00`);
+        const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} года`;
       } catch (_) {
         return '';
       }
@@ -1323,6 +1451,10 @@
     }
 
     function showNotice(text) {
+      if (state.actionOverlay && (state.actionOverlay.phase === 'success' || state.actionOverlay.phase === 'loading')) {
+        state.pendingNotice = text;
+        return;
+      }
       state.notice = text;
       render();
       window.clearTimeout(showNotice._timer);
@@ -1330,6 +1462,23 @@
         state.notice = '';
         render();
       }, 2500);
+    }
+
+    function overlaySnapshotKey() {
+      const o = state.actionOverlay;
+      if (!o) return '';
+      if (o._ts == null) o._ts = Date.now();
+      return [o.phase, o.variant || '', o.title || '', o.sub || '', o.loadingText || '', o._ts].join('\x1e');
+    }
+
+    function syncGlobalOverlay() {
+      const el = document.getElementById('global-overlay');
+      if (!el) return;
+      const k = overlaySnapshotKey();
+      if (k === lastOverlaySyncKey) return;
+      lastOverlaySyncKey = k;
+      el.innerHTML = renderActionOverlay() || '';
+      el.setAttribute('aria-hidden', state.actionOverlay ? 'false' : 'true');
     }
 
     function money(value) {
@@ -1370,14 +1519,16 @@
 
     function renderQtyStepper(item, variant) {
       const id = item.id;
-      const qty = state.cart[id] || 0;
-      if (qty <= 0) return '';
+      const idKey = String(id);
+      const qty = state.cart[id] || state.cart[idKey] || 0;
+      if (qty <= 0 && state.qtyDraft[idKey] === undefined) return '';
       const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
+      const displayVal = state.qtyDraft[idKey] !== undefined ? state.qtyDraft[idKey] : String(qty > 0 ? qty : '');
       return `
         <div class="qty-stepper${extra}">
           <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 5" onmousedown="event.preventDefault()">−</button>
           <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-            data-action="qty-input" data-id="${id}" value="${qty}" aria-label="Количество стеблей" />
+            data-action="qty-input" data-id="${id}" value="${escapeAttr(displayVal)}" aria-label="Количество стеблей" />
           <button type="button" class="icon-btn qty-step" data-action="qty-plus" data-id="${id}" aria-label="Добавить 5" onmousedown="event.preventDefault()">+</button>
           <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
         </div>
@@ -1482,6 +1633,11 @@
       return state.products.filter((item) => item.category === state.activeCategory);
     }
 
+    function productInCart(id) {
+      const k = String(id);
+      return (state.cart[id] || state.cart[k] || 0) > 0 || state.qtyDraft[k] !== undefined;
+    }
+
     function initDataHeaders(extra = {}) {
       return {
         'Content-Type': 'application/json',
@@ -1506,6 +1662,8 @@
       if (!state.isAdmin) return;
       let spinTimer = null;
       if (!silent) {
+        state.adminRequests = [];
+        render();
         spinTimer = window.setTimeout(() => {
           spinTimer = null;
           state.loadingAdminRequests = true;
@@ -1531,6 +1689,8 @@
       if (!state.isAdmin) return;
       let spinTimer = null;
       if (!silent) {
+        state.adminFlowers = [];
+        render();
         spinTimer = window.setTimeout(() => {
           spinTimer = null;
           state.loadingAdminCatalog = true;
@@ -1692,10 +1852,16 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
+        state.adminHighlightId = requestId;
         await loadAdminRequests(true);
         await loadProducts(true);
         showNotice('Заявка подтверждена');
+        window.setTimeout(() => {
+          state.adminHighlightId = null;
+          render();
+        }, 900);
       } catch (err) {
+        state.adminHighlightId = null;
         showNotice(translateApiError(err.message) || 'Не удалось подтвердить');
       }
       render();
@@ -1872,6 +2038,9 @@
     async function loadProducts(silent = false) {
       let spinTimer = null;
       if (!silent) {
+        state.products = [];
+        state.categories = [{ id: 'all', name: 'Все', count: 0 }];
+        render();
         spinTimer = window.setTimeout(() => {
           spinTimer = null;
           state.loadingProducts = true;
@@ -1896,6 +2065,8 @@
       if (!state.telegramId) return;
       let spinTimer = null;
       if (!silent) {
+        state.requests = [];
+        render();
         spinTimer = window.setTimeout(() => {
           spinTimer = null;
           state.loadingRequests = true;
@@ -1923,15 +2094,21 @@
         return;
       }
       if (!product.available) return;
+      delete state.qtyDraft[String(product.id)];
       state.cart[product.id] = 15;
       haptic('light');
       showNotice(`${product.name} · 15 стеблей в корзине`);
-      render();
     }
 
     function changeQty(productId, delta) {
+      const k = String(productId);
       const product = state.products.find((p) => String(p.id) === String(productId));
-      const current = state.cart[productId] || 0;
+      let current = state.cart[productId] || state.cart[k] || 0;
+      if (state.qtyDraft[k] !== undefined) {
+        const p = parseInt(String(state.qtyDraft[k]).replace(/\D/g, ''), 10);
+        if (Number.isFinite(p)) current = p;
+      }
+      delete state.qtyDraft[k];
       let next = current + delta;
       if (next <= 0) {
         delete state.cart[productId];
@@ -1948,6 +2125,7 @@
     }
 
     function setQtyFromInput(productId, raw) {
+      delete state.qtyDraft[String(productId)];
       const product = state.products.find((p) => String(p.id) === String(productId));
       const digits = String(raw || '').replace(/\D/g, '');
       const v = parseInt(digits, 10);
@@ -2005,6 +2183,7 @@
           sleep(900),
         ]);
         state.cart = {};
+        state.qtyDraft = {};
         state.deliveryDate = '';
         state.activeTab = 'orders';
         await loadRequests(true);
@@ -2190,6 +2369,19 @@
     }
 
     function renderHome() {
+      if (state.loadingProducts) {
+        return `
+        <section>
+          <div class="section-head">
+            <h3 class="section-title">Каталог</h3>
+            <button class="soft-btn" type="button" data-action="reload-catalog">Обновить</button>
+          </div>
+          <div class="catalog-loading-screen">
+            <div class="action-overlay-spinner"></div>
+            <span>Загружаем каталог…</span>
+          </div>
+        </section>`;
+      }
       const list = filteredProducts();
       return `
         ${renderCategories()}
@@ -2199,8 +2391,7 @@
             <button class="soft-btn" type="button" data-action="reload-catalog">Обновить</button>
           </div>
           <div class="stack">
-            ${state.loadingProducts ? `<div class="empty">Загружаем каталог...</div>` : ''}
-            ${!state.loadingProducts && !list.length ? `<div class="empty">В каталоге пока нет позиций.</div>` : ''}
+            ${!list.length ? `<div class="empty">В каталоге пока нет позиций.</div>` : ''}
             ${list.map((item) => renderProductCard(item)).join('')}
           </div>
         </section>
@@ -2208,7 +2399,7 @@
     }
 
     function renderProductCard(item) {
-      const inCart = (state.cart[item.id] || 0) > 0;
+      const inCart = productInCart(item.id);
       return `
         <article class="product-card ${item.available ? '' : 'out'}">
           <div class="product-row">
@@ -2240,7 +2431,13 @@
       if (!item) {
         return `<div class="empty">Товар не найден.</div>`;
       }
-      const inCart = state.cart[item.id] || 0;
+      const k = String(item.id);
+      const inCartUi = productInCart(item.id);
+      let displayQty = state.cart[item.id] || 0;
+      if (state.qtyDraft[k] !== undefined) {
+        const p = parseInt(String(state.qtyDraft[k]).replace(/\D/g, ''), 10);
+        if (Number.isFinite(p)) displayQty = p;
+      }
       return `
         <section class="stack">
           <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" />
@@ -2259,7 +2456,7 @@
               </div>
               <div class="detail-card">
                 <div class="detail-label">В корзине</div>
-                <div class="detail-value">${inCart} шт.</div>
+                <div class="detail-value">${displayQty} шт.</div>
               </div>
               <div class="detail-card">
                 <div class="detail-label">Длина стебля</div>
@@ -2271,7 +2468,7 @@
               </div>
             </div>
             <div class="actions actions--single" style="margin-top:16px;">
-              ${inCart
+              ${inCartUi
                 ? renderQtyStepper(item, 'card')
                 : item.available && canSalonOrder()
                   ? `<button class="btn" data-action="add" data-id="${item.id}">Добавить в корзину</button>`
@@ -2328,6 +2525,7 @@
 
     function renderCheckout() {
       const dd = state.deliveryDate || new Date().toISOString().slice(0, 10);
+      const humanDate = formatCheckoutDateShort(dd);
       const dowFull = weekdayFullRu(dd);
       return `
         <section class="stack">
@@ -2335,9 +2533,12 @@
             <h2 class="section-title">Оформление заявки</h2>
             <div class="muted" style="margin-top:6px;">После отправки менеджер получит заявку и ответит в Telegram.</div>
             <label class="detail-label" style="display:block;margin-top:16px;">Желаемая дата поставки</label>
-            <div class="checkout-date-row">
-            <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" style="flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
-            ${dowFull ? `<span class="checkout-dow" data-checkout-dow>(${escapeHtml(dowFull)})</span>` : ''}
+            <div class="checkout-date-block">
+              ${humanDate ? `<div class="checkout-date-human">${escapeHtml(humanDate)}</div>` : ''}
+              <div class="checkout-date-picker-wrap">
+                <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" />
+              </div>
+              ${dowFull ? `<div class="checkout-dow" data-checkout-dow style="margin-top:8px;">${escapeHtml(dowFull)}</div>` : ''}
             </div>
             <div class="detail-grid" style="margin-top:16px;">
               <div class="detail-card">
@@ -2364,14 +2565,26 @@
     }
 
     function renderRequests() {
+      if (state.loadingRequests) {
+        return `
+        <section class="stack">
+          <div class="section-head">
+            <h2 class="section-title">Мои заявки</h2>
+            <button class="soft-btn" data-action="reload-requests">Обновить</button>
+          </div>
+          <div class="catalog-loading-screen">
+            <div class="action-overlay-spinner"></div>
+            <span>Загружаем заявки…</span>
+          </div>
+        </section>`;
+      }
       return `
         <section class="stack">
           <div class="section-head">
             <h2 class="section-title">Мои заявки</h2>
             <button class="soft-btn" data-action="reload-requests">Обновить</button>
           </div>
-          ${state.loadingRequests ? `<div class="empty">Загружаем заявки...</div>` : ''}
-          ${!state.loadingRequests && !state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
+          ${!state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
           ${state.requests.map((item) => {
             const st = item.status || '';
             const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
@@ -2571,19 +2784,23 @@
       const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
       const canAct = item.status === 'new' || item.status === 'change_requested';
       const canDelete = st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client';
+      const pulse = state.adminHighlightId === item.id ? ' admin-req-card--pulse' : '';
       return `
-        <article class="admin-req-card status-${stCls}">
-          <div class="admin-req-top">
-            <div>
-              <div class="product-name">#${item.id}</div>
-              <div class="request-stems-hero" style="margin-top:8px;font-size:22px;">${item.total_stems || 0}<span>стеблей</span></div>
-              <div class="muted" style="margin-top:4px;font-size:13px;font-weight:700;">${money(item.total_amount || 0)}</div>
-              ${dd ? `<div class="request-delivery-line" style="margin-top:6px;">Поставка: <b>${escapeHtml(dd)}</b></div>` : ''}
+        <article class="admin-req-card status-${stCls}${pulse}">
+          <div class="admin-req-card-head">
+            <div class="admin-req-top">
+              <div>
+                <div class="product-name">#${item.id}</div>
+                <div class="request-stems-hero" style="margin-top:8px;font-size:22px;">${item.total_stems || 0}<span>стеблей</span></div>
+                <div class="muted" style="margin-top:4px;font-size:13px;font-weight:700;">${money(item.total_amount || 0)}</div>
+                ${dd ? `<div class="request-delivery-line" style="margin-top:6px;">Поставка: <b>${escapeHtml(dd)}</b></div>` : ''}
+              </div>
+              <div class="admin-req-meta">
+                <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
+                <div class="admin-req-time">${formatAdminTime(item.created_at)}</div>
+              </div>
             </div>
-            <div class="admin-req-meta">
-              <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
-              <div class="admin-req-time">${formatAdminTime(item.created_at)}</div>
-            </div>
+            ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
           </div>
           <div class="admin-req-lines">
             ${(item.items || []).map((row) => `• ${escapeHtml(row.name)} — ${row.qty} шт`).join('<br/>')}
@@ -2593,12 +2810,6 @@
             <button class="btn" type="button" data-action="admin-approve-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Подтвердить заявку</button>
             <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:8px;">Редактировать заявку</button>
             <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить с комментарием</button>
-          ` : ''}
-          ${canDelete ? `
-            <button class="btn-outline" type="button" data-action="admin-delete-req" data-id="${item.id}" style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:#fecaca;color:var(--danger);">
-              ${trashIconSvg}
-              <span>Удалить из списка</span>
-            </button>
           ` : ''}
         </article>
       `;
@@ -2648,7 +2859,12 @@
             <h2 class="section-title">Заявки клиентов</h2>
             <button class="soft-btn" type="button" data-action="admin-reload-requests">Обновить</button>
           </div>
-          ${state.loadingAdminRequests ? `<div class="empty">Загрузка…</div>` : ''}
+          ${state.loadingAdminRequests ? `
+            <div class="catalog-loading-screen">
+              <div class="action-overlay-spinner"></div>
+              <span>Загружаем заявки…</span>
+            </div>
+          ` : ''}
           ${!state.loadingAdminRequests && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
           ${!state.loadingAdminRequests && state.adminRequests.length ? `
             <div class="admin-toolbar">
@@ -2691,9 +2907,21 @@
       if (!tg || !tg.initData) {
         return `<section class="stack"><div class="warning">Откройте мини-приложение из Telegram — для админки нужна подпись WebApp.</div></section>`;
       }
+      if (state.loadingAdminCatalog) {
+        return `
+          <section class="stack">
+            <div class="section-head" style="margin-bottom:0;">
+              <h3 class="section-title">Каталог</h3>
+              <button class="soft-btn" type="button" data-action="admin-reload-catalog">Обновить</button>
+            </div>
+            <div class="catalog-loading-screen">
+              <div class="action-overlay-spinner"></div>
+              <span>Загружаем каталог…</span>
+            </div>
+          </section>`;
+      }
       return `
           <section class="stack">
-            ${state.loadingAdminCatalog ? `<div class="empty">Загрузка…</div>` : ''}
             <div class="panel">
               <div class="section-head" style="margin-bottom:0;">
                 <h3 class="section-title">Каталог</h3>
@@ -2798,6 +3026,15 @@
     }
 
     function render() {
+      if (!state.actionOverlay && state.pendingNotice) {
+        state.notice = state.pendingNotice;
+        state.pendingNotice = '';
+        window.clearTimeout(showNotice._timer);
+        showNotice._timer = window.setTimeout(() => {
+          state.notice = '';
+          render();
+        }, 2500);
+      }
       const app = document.getElementById('app');
       const ae = document.activeElement;
       let qtyFocusId = null;
@@ -2830,7 +3067,6 @@
         </div>
         ${renderAdminEditorModal()}
         ${renderRejectModal()}
-        ${renderActionOverlay()}
       `;
 
       if (qtyFocusId != null) {
@@ -2844,6 +3080,7 @@
       }
 
       updateTelegramButtons();
+      syncGlobalOverlay();
     }
 
     document.addEventListener('change', (event) => {
@@ -2867,6 +3104,11 @@
     });
     document.addEventListener('input', (event) => {
       const t = event.target;
+      if (t && t.matches && t.matches('[data-action="qty-input"]')) {
+        const pid = t.dataset.id;
+        if (pid != null) state.qtyDraft[String(pid)] = t.value;
+        return;
+      }
       if (t && t.matches && t.matches('[data-admin-flower-price]')) {
         const fid = Number(t.dataset.id);
         const f = state.adminFlowers.find((x) => x.id === fid);
