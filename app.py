@@ -26,7 +26,7 @@ REQUESTS_TABLE = os.getenv("REQUESTS_TABLE", "client_requests")
 FLOWER_TYPES_SELECT_FULL = "id,name,stems_count,catalog_visible,price_rub,color,stem_length_cm"
 FLOWER_TYPES_SELECT_BASIC = "id,name,stems_count,catalog_visible,price_rub"
 REQUESTS_SELECT_FULL = (
-    "id,status,salon_name,total_amount,total_stems,items,created_at,updated_at,manager_note,previous_items,"
+    "id,status,salon_id,salon_name,total_amount,total_stems,items,created_at,updated_at,manager_note,previous_items,"
     "delivery_date,previous_delivery_date"
 )
 REQUESTS_SELECT_BASIC = "id,status,salon_name,total_amount,total_stems,items,created_at,updated_at"
@@ -538,11 +538,50 @@ def build_client_order_details_message(request_row: Dict[str, Any], title: str) 
     )
 
 
+def _items_snapshot_for_compare(items: List[Dict[str, Any]]) -> List[Tuple[Any, int, float]]:
+    """Сравнение состава заказа без учёта порядка строк."""
+    out: List[Tuple[Any, int, float]] = []
+    for it in items or []:
+        qty = int(it.get("qty") or it.get("quantity") or 0)
+        if qty <= 0:
+            continue
+        pid = it.get("id")
+        price = float(parse_rub_price(it.get("price")))
+        out.append((pid, qty, round(price, 2)))
+    out.sort(key=lambda x: (str(x[0]), x[1], x[2]))
+    return out
+
+
+def items_changed_for_revise(prev: List[Dict[str, Any]], cur: List[Dict[str, Any]]) -> bool:
+    return _items_snapshot_for_compare(prev) != _items_snapshot_for_compare(cur)
+
+
 def build_revision_diff_message(request_row: Dict[str, Any]) -> str:
     rid = request_row.get("id")
     prev = request_row.get("previous_items") or []
     cur = request_row.get("items") or []
     note = str(request_row.get("manager_note") or "").strip()
+    pd = request_row.get("previous_delivery_date")
+    cd = request_row.get("delivery_date")
+    pdd = parse_iso_date_only(pd)
+    cdd = parse_iso_date_only(cd)
+    date_changed = bool(cdd) and (not pdd or pdd != cdd)
+    items_were_changed = items_changed_for_revise(prev, cur)
+
+    if not items_were_changed:
+        title = (
+            "📅 <b>Изменили дату поставки</b>"
+            if date_changed
+            else "✏️ <b>Сообщение по заявке</b>"
+        )
+        lines = [title, "", f"Заявка <b>#{html.escape(str(rid))}</b>", ""]
+        if date_changed and cdd:
+            lines.append(f"Новая дата поставки: <b>{html.escape(format_date_ru_long(cd))}</b>.")
+        if note:
+            lines.append("")
+            lines.extend(["<b>Комментарий менеджера:</b>", html.escape(note)])
+        return "\n".join(lines)
+
     lines = [
         "✏️ <b>Менеджер внёс изменения в заявку</b>",
         "",
@@ -557,21 +596,13 @@ def build_revision_diff_message(request_row: Dict[str, Any]) -> str:
         f"Новый итог: <b>{float(request_row.get('total_amount') or 0):.0f} ₽</b>, "
         f"стеблей: <b>{int(request_row.get('total_stems') or 0)}</b>",
     ]
-    pd = request_row.get("previous_delivery_date")
-    cd = request_row.get("delivery_date")
-    pdd = parse_iso_date_only(pd)
-    cdd = parse_iso_date_only(cd)
-    if pdd and cdd and pdd != cdd:
+    if date_changed and cdd:
         lines.extend(
             [
                 "",
-                "<b>Дата поставки:</b>",
-                f"было — <b>{html.escape(format_date_ru_long(pd))}</b>",
-                f"стало — <b>{html.escape(format_date_ru_long(cd))}</b>",
+                f"Дата поставки: <b>{html.escape(format_date_ru_long(cd))}</b>",
             ]
         )
-    elif cdd and not pdd:
-        lines.extend(["", f"<b>Дата поставки:</b> <b>{html.escape(format_date_ru_long(cd))}</b>"])
     if note:
         lines.extend(["", "<b>Комментарий менеджера:</b>", html.escape(note)])
     return "\n".join(lines)
@@ -886,20 +917,31 @@ def api_admin_revise_request(request_id: int):
         return jsonify({"ok": False, "error": "no valid lines"}), 400
 
     previous_items = row.get("items") or []
+    items_were_changed = items_changed_for_revise(previous_items, normalized)
+
+    merged_note = comment
+    dshort: Optional[str] = None
+    date_changed = False
+    prev_d = row.get("delivery_date")
+    if delivery_new:
+        if len(delivery_new) < 10 or delivery_new[4] != "-" or delivery_new[7] != "-":
+            return jsonify({"ok": False, "error": "invalid_delivery_date"}), 400
+        dshort = delivery_new[:10]
+        pk = str(prev_d)[:10] if prev_d else ""
+        date_changed = pk != dshort
+    if not merged_note and dshort and date_changed and not items_were_changed:
+        merged_note = f"Изменили дату поставки на {format_date_ru_long(dshort)}."
+
     patch_body: Dict[str, Any] = {
         "previous_items": previous_items,
         "items": normalized,
         "total_amount": round(total_amount, 2),
         "total_stems": total_stems,
-        "manager_note": comment if comment else None,
+        "manager_note": merged_note if merged_note else None,
         "status": "change_requested",
         "updated_at": now_iso(),
     }
-    if delivery_new:
-        if len(delivery_new) < 10 or delivery_new[4] != "-" or delivery_new[7] != "-":
-            return jsonify({"ok": False, "error": "invalid_delivery_date"}), 400
-        dshort = delivery_new[:10]
-        prev_d = row.get("delivery_date")
+    if delivery_new and dshort:
         if prev_d and str(prev_d)[:10] != dshort:
             patch_body["previous_delivery_date"] = prev_d
         patch_body["delivery_date"] = dshort
@@ -1041,6 +1083,36 @@ def load_all_requests_admin(*, limit: int = 300) -> List[Dict[str, Any]]:
     if not r2.ok:
         raise RuntimeError(r2.text)
     return r2.json() or []
+
+
+def enrich_requests_with_salon_logos(rows: List[Dict[str, Any]]) -> None:
+    """Добавляет salon_logo из таблицы salons (колонка logo_url), если есть."""
+    ids: List[Any] = []
+    seen: Set[Any] = set()
+    for row in rows:
+        sid = row.get("salon_id")
+        if sid is None or sid in seen:
+            continue
+        seen.add(sid)
+        ids.append(sid)
+    if not ids:
+        return
+    try:
+        q = ",".join(str(x) for x in ids)
+        r = supabase_get(
+            "salons",
+            {"select": "id,logo_url", "id": f"in.({q})"},
+        )
+        if not r.ok:
+            return
+        by_id = {x.get("id"): x.get("logo_url") for x in (r.json() or [])}
+        for row in rows:
+            sid = row.get("salon_id")
+            url = by_id.get(sid) if sid is not None else None
+            if url:
+                row["salon_logo"] = str(url).strip()
+    except Exception:
+        return
 
 
 def load_requests_for_user(telegram_id: int | str) -> List[Dict[str, Any]]:
@@ -1315,6 +1387,7 @@ def api_admin_requests_list():
         return err[0], err[1]
     try:
         rows = load_all_requests_admin()
+        enrich_requests_with_salon_logos(rows)
         return jsonify({"ok": True, "requests": rows})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500

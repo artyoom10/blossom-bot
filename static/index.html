@@ -301,9 +301,10 @@
     }
     .btn {
       flex: 1;
-      background: var(--primary);
+      background: #2f6b52;
       color: white;
       padding: 12px 16px;
+      box-shadow: none;
     }
     .btn:disabled {
       cursor: not-allowed;
@@ -319,16 +320,22 @@
     }
     .btn-cancel-request {
       flex: 1;
-      background: var(--danger);
-      color: #fff;
-      border: 0;
+      background: rgba(180, 35, 24, 0.1);
+      color: #9f2a22;
+      border: 1px solid rgba(180, 35, 24, 0.42);
       border-radius: 999px;
       padding: 12px 16px;
       font-weight: 800;
       cursor: pointer;
     }
     .btn-cancel-request:active {
-      opacity: 0.92;
+      opacity: 0.88;
+      background: rgba(180, 35, 24, 0.16);
+    }
+    .btn--danger-soft {
+      background: rgba(180, 35, 24, 0.1) !important;
+      color: #9f2a22 !important;
+      border: 1px solid rgba(180, 35, 24, 0.38) !important;
     }
     .icon-btn {
       width: 42px;
@@ -443,49 +450,31 @@
       font-size: 14px;
     }
     .summary {
-      background: linear-gradient(165deg, #1e293b 0%, #0f172a 55%, #020617 100%);
-      color: #f8fafc;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      background: #111827;
+      color: white;
       border-radius: 28px;
       padding: 18px;
       box-shadow: var(--shadow);
-      border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .summary-row {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      gap: 12px;
+      color: rgba(255,255,255,.7);
       font-size: 13px;
-    }
-    .summary-lbl {
-      color: rgba(248, 250, 252, 0.78);
-      font-weight: 600;
-    }
-    .summary-val {
-      color: #ffffff;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      text-align: right;
     }
     .summary-total {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      gap: 12px;
       margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
       font-size: 24px;
-      font-weight: 800;
-    }
-    .summary-total .summary-lbl {
-      color: rgba(248, 250, 252, 0.88);
-      font-size: 15px;
       font-weight: 700;
+      color: white;
     }
-    .summary-total .summary-val {
-      font-size: 24px;
-      font-weight: 800;
+    .summary-total span:last-child {
+      color: white;
     }
     .summary-note { margin-top: 12px; color: rgba(255,255,255,.82); font-size: 13px; }
 
@@ -968,6 +957,14 @@
       font-weight: 800;
       color: var(--text);
       letter-spacing: -0.02em;
+      min-height: 1.35em;
+    }
+    .boot-splash__title--fade {
+      opacity: 0;
+      transition: opacity 0.55s ease;
+    }
+    .boot-splash__title--fade.is-visible {
+      opacity: 1;
     }
     .boot-splash__msg {
       margin: 16px 0 0;
@@ -1038,10 +1035,8 @@
       font-size: 16px;
       font-weight: 800;
       color: #fff;
-      background: linear-gradient(145deg, #1f7a5b 0%, #2d9d78 55%, #1a6b50 100%);
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-        0 8px 20px rgba(31, 122, 91, 0.28);
+      background: linear-gradient(145deg, #356b58 0%, #4a8872 55%, #2f5846 100%);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset, 0 6px 16px rgba(31, 90, 70, 0.22);
       cursor: pointer;
     }
     .cart-checkout-glow-btn:active {
@@ -1056,11 +1051,8 @@
       font-size: 16px;
       font-weight: 800;
       color: #fff;
-      background: linear-gradient(145deg, #1f7a5b 0%, #2d9d78 55%, #1a6b50 100%);
-      box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.12) inset,
-        0 8px 28px rgba(31, 122, 91, 0.45),
-        0 0 28px rgba(45, 157, 120, 0.3);
+      background: linear-gradient(145deg, #356b58 0%, #4a8872 55%, #2f5846 100%);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) inset, 0 6px 16px rgba(31, 90, 70, 0.22);
       cursor: pointer;
     }
     .checkout-submit-glow:disabled {
@@ -1070,10 +1062,56 @@
     .cart-screen--has-checkout {
       padding-bottom: 96px;
     }
-    .admin-req-card-top {
+    .cart-screen > .stack {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .admin-req-summary-head {
       display: flex;
-      gap: 8px;
       align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+      text-align: left;
+    }
+    .admin-req-salon-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+    .admin-req-summary-main {
+      flex: 1;
+      min-width: 0;
+    }
+    .admin-req-card-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .admin-req-expand-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border: 0;
+      background: transparent;
+      padding: 4px 0 0;
+      cursor: pointer;
+      color: inherit;
+      font: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .admin-req-card-top {
+      display: block;
     }
     .admin-req-summary-btn {
       flex: 1;
@@ -1903,9 +1941,9 @@
       align-items: center;
       justify-content: center;
       border-radius: 12px;
-      border: 1px solid #fecaca;
-      background: #fff8f8;
-      color: var(--danger);
+      border: 1px solid rgba(180, 35, 24, 0.35);
+      background: rgba(180, 35, 24, 0.08);
+      color: #9f2a22;
       cursor: pointer;
     }
     .admin-req-delete svg {
@@ -1966,7 +2004,7 @@
         <img class="boot-splash__logo" src="/miniapp/blossom_logo.png" width="96" height="96" alt="Blossom Flower Farm" />
       </div>
       <p class="boot-splash__brand">Blossom Flower Farm</p>
-      <h2 class="boot-splash__title"></h2>
+      <h2 class="boot-splash__title boot-splash__title--fade"></h2>
       <p class="boot-splash__msg" id="boot-splash-msg">Связываемся с сервером…</p>
       <div class="boot-dots" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
@@ -2034,6 +2072,8 @@
       adminExpandedRequestIds: {},
       /** Клиент: раскрытая заявка id → true */
       clientExpandedRequestIds: {},
+      /** Админ: полноэкранный оверлей при обновлении/сохранении (как у клиента) */
+      adminBlockingMessage: null,
     };
 
     let lastOverlaySyncKey = '\x00';
@@ -2187,13 +2227,17 @@
     function setBootSplashPlaceholder() {
       const titleEl = document.querySelector('.boot-splash__title');
       if (!titleEl) return;
-      titleEl.textContent = `${splashGreetingWord()}, …`;
+      titleEl.textContent = '';
+      titleEl.classList.remove('is-visible');
     }
 
     function updateBootSplashGreeting() {
       const titleEl = document.querySelector('.boot-splash__title');
       if (!titleEl) return;
       titleEl.textContent = `${splashGreetingWord()}, ${splashDisplayName()}`;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => titleEl.classList.add('is-visible'));
+      });
     }
     setBootSplashPlaceholder();
 
@@ -2369,6 +2413,12 @@
       return (p && p.image) ? p.image : '/miniapp/blossom_logo.png';
     }
 
+    function adminSalonAvatarUrl(item) {
+      const u = item && item.salon_logo;
+      if (u && String(u).trim()) return String(u).trim();
+      return '/miniapp/blossom_logo.png';
+    }
+
     function requestLineMoney(row) {
       const q = Number(row.qty) || 0;
       const pr = Number(row.price) || 0;
@@ -2399,6 +2449,7 @@
       if (!state.isAdmin) return;
       if (!silent) {
         state.loadingAdminRequests = true;
+        state.adminBlockingMessage = 'Обновляем заявки…';
         render();
       }
       try {
@@ -2411,6 +2462,7 @@
         if (!silent) showNotice(translateApiError(err.message) || 'Не удалось загрузить заявки');
       } finally {
         state.loadingAdminRequests = false;
+        state.adminBlockingMessage = null;
         render();
       }
     }
@@ -2419,6 +2471,7 @@
       if (!state.isAdmin) return;
       if (!silent) {
         state.loadingAdminCatalog = true;
+        state.adminBlockingMessage = 'Обновляем каталог…';
         render();
       }
       try {
@@ -2431,32 +2484,40 @@
         if (!silent) showNotice(err.message || 'Не удалось загрузить каталог');
       } finally {
         state.loadingAdminCatalog = false;
+        state.adminBlockingMessage = null;
         render();
       }
     }
 
     async function saveAdminCatalog() {
-      const rows = state.adminFlowers.map((f) => {
-        const pr = f.price_rub;
-        const numPrice = pr === '' || pr == null ? null : Number(pr);
-        const st = f.stems_count;
-        const numStock = st === '' || st == null ? null : Number(st);
-        return {
-          id: f.id,
-          catalog_visible: !!f.catalog_visible,
-          price_rub: numPrice != null && !Number.isNaN(numPrice) ? numPrice : null,
-          stems_count: numStock != null && !Number.isNaN(numStock) ? numStock : null,
-        };
-      });
-      const res = await fetch('/api/admin/catalog', {
-        method: 'POST',
-        headers: initDataHeaders(),
-        body: JSON.stringify({ flowers: rows }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка сохранения');
-      await loadProducts(true);
-      showNotice('Каталог сохранён');
+      state.adminBlockingMessage = 'Сохраняем в базе…';
+      render();
+      try {
+        const rows = state.adminFlowers.map((f) => {
+          const pr = f.price_rub;
+          const numPrice = pr === '' || pr == null ? null : Number(pr);
+          const st = f.stems_count;
+          const numStock = st === '' || st == null ? null : Number(st);
+          return {
+            id: f.id,
+            catalog_visible: !!f.catalog_visible,
+            price_rub: numPrice != null && !Number.isNaN(numPrice) ? numPrice : null,
+            stems_count: numStock != null && !Number.isNaN(numStock) ? numStock : null,
+          };
+        });
+        const res = await fetch('/api/admin/catalog', {
+          method: 'POST',
+          headers: initDataHeaders(),
+          body: JSON.stringify({ flowers: rows }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка сохранения');
+        await loadProducts(true);
+        showNotice('Каталог сохранён');
+      } finally {
+        state.adminBlockingMessage = null;
+        render();
+      }
     }
 
     async function openAdminEditor(requestId) {
@@ -2673,7 +2734,7 @@
             <p class="muted" style="margin-top:8px;line-height:1.45;">По желанию укажите причину — клиент увидит её в приложении и в Telegram.</p>
             <textarea data-reject-comment placeholder="Комментарий (необязательно)" style="width:100%;min-height:88px;margin-top:10px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
             <div class="actions actions--single" style="margin-top:16px;">
-              <button class="btn" type="button" data-action="admin-reject-submit" data-id="${rid}" style="background:var(--danger);">Отменить заявку</button>
+              <button class="btn btn--danger-soft" type="button" data-action="admin-reject-submit" data-id="${rid}">Отменить заявку</button>
               <button class="btn-outline" type="button" data-action="admin-reject-close" style="margin-top:10px;">Закрыть</button>
             </div>
           </div>
@@ -3242,9 +3303,9 @@
                 </article>
               `).join('')}
               <div class="summary">
-                <div class="summary-row"><span class="summary-lbl">Позиций</span><span class="summary-val">${items.length}</span></div>
-                <div class="summary-row" style="margin-top:8px;"><span class="summary-lbl">Стеблей</span><span class="summary-val">${cartCount()}</span></div>
-                <div class="summary-total"><span class="summary-lbl">Итого</span><span class="summary-val">${money(cartTotal())}</span></div>
+                <div class="summary-row"><span>Позиций</span><span>${items.length}</span></div>
+                <div class="summary-row" style="margin-top:8px;"><span>Стеблей</span><span>${cartCount()}</span></div>
+                <div class="summary-total"><span>Итого</span><span>${money(cartTotal())}</span></div>
               </div>
             </div>
             <div class="cart-checkout-bar">
@@ -3662,19 +3723,29 @@
       const pulse = state.adminHighlightId === item.id ? ' request-card--pulse' : '';
       const expanded = !!state.adminExpandedRequestIds[item.id];
       const canDelete = st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client';
+      const av = escapeAttr(adminSalonAvatarUrl(item));
       return `
         <article class="request-card admin-request-card status-${stCls}${pulse}">
           <div class="admin-req-card-top">
-            <button type="button" class="admin-req-summary-btn" data-action="admin-toggle-req" data-id="${item.id}">
-              <div class="admin-req-summary-row">
-                <span class="admin-req-id">Заявка #${item.id}</span>
-                <div class="admin-req-summary-trail">
-                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
-                  <span class="admin-req-chevron-wrap${expanded ? ' is-open' : ''}" aria-hidden="true">${chevronDownSvg}</span>
+            <div class="admin-req-summary-visual">
+              <div class="admin-req-summary-head">
+                <img class="admin-req-salon-avatar" src="${av}" alt="" width="36" height="36" loading="lazy" decoding="async" />
+                <div class="admin-req-summary-main">
+                  <div class="admin-req-summary-row">
+                    <span class="admin-req-id">Заявка #${item.id}</span>
+                    <div class="admin-req-summary-trail">
+                      <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
+                    </div>
+                  </div>
+                  ${item.salon_name ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>` : ''}
+                  <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
                 </div>
               </div>
-              ${item.salon_name ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>` : ''}
-              <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
+            </div>
+          </div>
+          <div class="admin-req-card-footer">
+            <button type="button" class="admin-req-expand-btn" data-action="admin-toggle-req" data-id="${item.id}" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="Подробнее по заявке">
+              <span class="admin-req-chevron-wrap${expanded ? ' is-open' : ''}" aria-hidden="true">${chevronDownSvg}</span>
             </button>
             ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
           </div>
@@ -3724,6 +3795,9 @@
       if (!tg || !tg.initData) {
         return `<section class="stack"><div class="warning">Откройте мини-приложение из Telegram — для админки нужна подпись WebApp.</div></section>`;
       }
+      if (state.adminBlockingMessage) {
+        return `<section class="stack">${renderPageRefreshOverlay(state.adminBlockingMessage)}</section>`;
+      }
       const filtered = filterAdminRequestsBySalon(state.adminRequests, state.adminSalonFilter);
       const board = buildAdminRequestBoard(filtered);
       const salonOpts = adminSalonFilterOptions(state.adminRequests);
@@ -3741,11 +3815,6 @@
           ` : ''}
           ${!state.loadingAdminRequests && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
           ${state.adminRequests.length ? `
-            ${state.loadingAdminRequests ? `
-            <div class="catalog-loading-banner">
-              <div class="action-overlay-spinner" style="width:28px;height:28px;margin:0 12px 0 0;border-width:2px;"></div>
-              <span>Обновляем заявки…</span>
-            </div>` : ''}
             <div class="admin-toolbar">
               <label for="admin-salon-filter">Салон</label>
               <select id="admin-salon-filter" data-action="admin-filter-salon" class="admin-filter-select" aria-label="Фильтр по салону">
@@ -3786,7 +3855,10 @@
       if (!tg || !tg.initData) {
         return `<section class="stack"><div class="warning">Откройте мини-приложение из Telegram — для админки нужна подпись WebApp.</div></section>`;
       }
-      if (state.loadingAdminCatalog) {
+      if (state.adminBlockingMessage) {
+        return renderPageRefreshOverlay(state.adminBlockingMessage);
+      }
+      if (state.loadingAdminCatalog && !state.adminFlowers.length) {
         return `
           <section class="stack">
             <div class="section-head" style="margin-bottom:0;">
@@ -3853,9 +3925,12 @@
           </div>
         </div>`;
       }
-      const isDanger = ov.variant === 'cancel' || ov.variant === 'revision-reject';
-      const iconWrapStyle = isDanger
-        ? 'background:#fff1f1;color:var(--danger);'
+      const isRoseSuccess =
+        ov.variant === 'cancel'
+        || ov.variant === 'revision-reject'
+        || ov.variant === 'admin-delete-ok';
+      const iconWrapStyle = isRoseSuccess
+        ? 'background:#fff1f2;color:#c53030;'
         : '';
       return `
         <div class="order-success-overlay" aria-live="polite">
