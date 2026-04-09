@@ -299,10 +299,35 @@
       color: #5c6570;
       border-color: #d5dbe3;
     }
+    .product-card .pill {
+      font-size: 13px;
+      font-weight: 800;
+      padding: 7px 14px;
+      letter-spacing: 0.03em;
+    }
     .product-price {
       margin-top: 12px;
       font-size: 14px;
       font-weight: 700;
+    }
+    .product-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-top: 10px;
+      width: 100%;
+      min-width: 0;
+    }
+    .product-meta-row .product-price {
+      margin-top: 0;
+      flex: 1;
+      min-width: 0;
+    }
+    .product-meta-row .product-line-total {
+      flex-shrink: 0;
+      text-align: right;
+      margin-top: 0;
     }
     .actions {
       display: flex;
@@ -1046,14 +1071,14 @@
       0%, 100% { opacity: 0.2; transform: translateY(0); }
       50% { opacity: 1; transform: translateY(-1px); }
     }
-    svg.admin-star-inline {
+    svg.admin-gold-check {
       display: inline-block;
       vertical-align: middle;
-      margin-left: 6px;
-      width: 22px;
-      height: 22px;
+      margin-left: 8px;
+      width: 24px;
+      height: 24px;
       line-height: 0;
-      filter: drop-shadow(0 1px 1px rgba(180, 140, 40, 0.35));
+      filter: drop-shadow(0 0 8px rgba(255, 210, 90, 0.95)) drop-shadow(0 0 2px rgba(200, 150, 40, 0.9));
     }
     .boot-dots {
       display: flex;
@@ -1481,8 +1506,8 @@
       min-width: 42px;
     }
     .cart-item .qty-stepper--cart .qty-input-field {
-      padding: 8px 4px;
-      font-size: 16px;
+      padding: 6px 4px;
+      font-size: 14px;
     }
     .cart-row {
       max-width: 100%;
@@ -1512,24 +1537,29 @@
       box-sizing: border-box;
     }
     .qty-stepper--cart-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(44px, 1.35fr) minmax(0, 1fr);
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
       min-width: 0;
       box-sizing: border-box;
     }
     .qty-stepper--cart-row .qty-stepper-deltas {
       display: flex;
       gap: 4px;
-      min-width: 0;
-      flex-shrink: 1;
+      flex-shrink: 0;
     }
     .qty-stepper--cart-row .qty-input-field {
-      width: 100%;
-      min-width: 0;
-      max-width: 100%;
+      flex: 0 0 52px;
+      width: 52px;
+      min-width: 44px;
+      max-width: 52px;
+      padding: 6px 4px;
+      font-size: 14px;
     }
     .qty-stepper--cart-stack .qty-remove {
       display: none;
@@ -2380,7 +2410,7 @@
       }
     }
 
-    const goldStarSvg = '<svg class="admin-star-inline" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path fill="#f0c850" stroke="#b8860b" stroke-width="0.7" d="M12 2.5l2.6 5.3 5.9.9-4.3 4.2 1 5.9L12 16.9 6.8 18.8l1-5.9L3.5 8.7l5.9-.9L12 2.5z"/></svg>';
+    const goldCheckSvg = '<svg class="admin-gold-check" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#fdf6d3" stroke="#d4a017" stroke-width="1.2"/><path fill="none" stroke="#1f7a5b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7 12.5l3 3 7-7"/></svg>';
 
     const iconNav = {
       home: '<svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
@@ -2487,7 +2517,7 @@
       try {
         if (window._bootPhraseTimer) window.clearInterval(window._bootPhraseTimer);
       } catch (_) {}
-      window._bootPhraseTimer = window.setInterval(renderPhrase, 4200);
+      window._bootPhraseTimer = window.setInterval(renderPhrase, 1500);
     }
 
     function splashGreetingWord() {
@@ -2841,7 +2871,7 @@
           sub: 'Каталог обновлён в базе',
         };
         render();
-        await sleep(2000);
+        await sleep(1400);
         state.actionOverlay = null;
         showNotice('Каталог сохранён');
       } catch (err) {
@@ -2883,18 +2913,28 @@
       state.actionOverlay = { phase: 'loading', variant: 'admin-revise', loadingText: 'Отправляем правки…' };
       render();
       const ed = state.adminEditor;
+      const panel = document.querySelector('.admin-modal-panel');
+      if (!panel) {
+        state.actionOverlay = null;
+        showNotice('Форма не найдена — откройте заявку снова');
+        render();
+        return;
+      }
       const items = ed.items
         .map((line, idx) => {
-          const qtyEl = document.querySelector(`[data-admin-revise-qty][data-idx="${idx}"]`);
-          const prEl = document.querySelector(`[data-admin-revise-price][data-idx="${idx}"]`);
-          const qty = parseInt(String(qtyEl && qtyEl.value ? qtyEl.value : line.qty).replace(/\D/g, ''), 10);
-          const price = prEl && prEl.value !== undefined ? prEl.value : line.price;
+          const qtyEl = panel.querySelector(`[data-admin-revise-qty][data-idx="${idx}"]`);
+          const prEl = panel.querySelector(`[data-admin-revise-price][data-idx="${idx}"]`);
+          const qtyRaw = qtyEl ? String(qtyEl.value ?? '').trim() : '';
+          const qtyParsed = qtyRaw !== '' ? parseInt(qtyRaw.replace(/\D/g, ''), 10) : NaN;
+          const qty = Number.isFinite(qtyParsed) ? qtyParsed : (Number(line.qty) || 0);
+          const priceRaw = prEl ? String(prEl.value ?? '').trim() : '';
+          const price = priceRaw !== '' ? priceRaw : line.price;
           return { id: line.id, name: line.name, qty, price };
         })
         .filter((i) => i.qty > 0);
-      const ta = document.querySelector('[data-admin-revise-comment]');
+      const ta = panel.querySelector('[data-admin-revise-comment]');
       const comment = (ta && ta.value ? ta.value : '').trim();
-      const dEl = document.querySelector('[data-admin-revise-delivery]');
+      const dEl = panel.querySelector('[data-admin-revise-delivery]');
       const deliveryDate = (dEl && dEl.value ? dEl.value : ed.deliveryDate || '').trim().slice(0, 10);
       if (!items.length) {
         state.actionOverlay = null;
@@ -2909,7 +2949,7 @@
             headers: initDataHeaders(),
             body: JSON.stringify({ items, comment, delivery_date: deliveryDate || undefined }),
           }),
-          sleep(520),
+          sleep(380),
         ]);
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
@@ -2925,7 +2965,7 @@
           sub: 'Клиент получит уведомление в Telegram',
         };
         render();
-        await sleep(2400);
+        await sleep(1600);
         state.actionOverlay = null;
         showNotice('Клиенту отправлены правки');
       } catch (err) {
@@ -2962,7 +3002,7 @@
           sub: 'Клиент уведомлён',
         };
         render();
-        await sleep(2200);
+        await sleep(1750);
         state.actionOverlay = null;
         showNotice('Заявка отменена, клиент уведомлён');
       } catch (err) {
@@ -2996,7 +3036,7 @@
           sub: 'Клиент получит уведомление',
         };
         render();
-        await sleep(2200);
+        await sleep(1750);
         state.actionOverlay = null;
         showNotice('Заявка подтверждена');
         window.setTimeout(() => {
@@ -3045,7 +3085,7 @@
           sub: '',
         };
         render();
-        await sleep(2000);
+        await sleep(1500);
         state.actionOverlay = null;
         showNotice('Заявка удалена');
       } catch (err) {
@@ -3180,7 +3220,7 @@
               decision,
             }),
           }),
-          sleep(500),
+          sleep(380),
         ]);
         if (state.isAdmin) await loadAdminRequests(true);
         else await loadRequests(true);
@@ -3202,7 +3242,7 @@
           };
         }
         render();
-        await sleep(2600);
+        await sleep(2000);
         state.actionOverlay = null;
         showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Восстановлен прежний состав заявки');
       } catch (err) {
@@ -3433,7 +3473,7 @@
           sub: 'Менеджер увидит её в Telegram',
         };
         render();
-        await sleep(2200);
+        await sleep(1750);
         state.actionOverlay = null;
         showNotice('Заявка отправлена менеджеру');
       } catch (err) {
@@ -3467,7 +3507,7 @@
           sub: 'Резерв по позициям снят',
         };
         render();
-        await sleep(2600);
+        await sleep(2000);
         state.actionOverlay = null;
         showNotice('Заявка отменена');
       } catch (err) {
@@ -3478,7 +3518,7 @@
           sub: 'Обновите страницу, чтобы увидеть актуальный статус заявки.',
         };
         render();
-        await sleep(2800);
+        await sleep(2200);
         state.actionOverlay = null;
         showNotice(translateApiError(err.message) || 'Не удалось отменить заявку');
       }
@@ -3543,7 +3583,7 @@
               ${logo}
               <div class="header-brand-text">
                 <div class="eyebrow">${sub}</div>
-                <h1 class="title">Личный кабинет ${goldStarSvg}</h1>
+                <h1 class="title">Личный кабинет Админа ${goldCheckSvg}</h1>
               </div>
             </div>
             ${salonCorner}
@@ -3628,11 +3668,12 @@
                   <h4 class="product-name">${escapeHtml(item.name)}</h4>
                   <div class="muted">${productStockLine(item)}</div>
                 </div>
-                ${inCart
-        ? `<div class="product-line-total">${lineTot}</div>`
-        : `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>`}
+                ${!inCart ? `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>` : ''}
               </div>
-              <div class="product-price">${escapeHtml(item.price_label)}</div>
+              <div class="product-meta-row">
+                <span class="product-price">${escapeHtml(item.price_label)}</span>
+                ${inCart ? `<span class="product-line-total">${lineTot}</span>` : ''}
+              </div>
             </div>`;
       return `
         <article class="product-card ${item.available ? '' : 'out'}">
@@ -3979,7 +4020,7 @@
               <div class="profile-top">
                 <div class="profile-avatar" style="background:var(--primary-soft);color:var(--primary);">${iconNav.admin}</div>
                 <div>
-                  <div class="product-name">Личный кабинет ${goldStarSvg}</div>
+                  <div class="product-name">Администратор ${goldCheckSvg}</div>
                   <div class="muted">Blossom Flower Farm · режим администратора</div>
                 </div>
               </div>
@@ -3999,7 +4040,7 @@
           <div class="admin-profile-strip">
             <span class="admin-profile-strip__icon" aria-hidden="true">${iconNav.admin}</span>
             <div>
-              <p class="admin-profile-strip__title">Личный кабинет ${goldStarSvg}</p>
+              <p class="admin-profile-strip__title">Администратор ${goldCheckSvg}</p>
             </div>
           </div>` : ''}
           <div class="profile-card">
@@ -4416,7 +4457,7 @@
         const tabs = [
           ['home', iconNav.home, 'Каталог'],
           ['orders', iconNav.orders, 'Заявки'],
-          ['profile', iconNav.person, 'Профиль'],
+          ['profile', iconNav.person, 'Администратор'],
           ['admin', iconNav.admin, 'Админ'],
         ];
         return `
@@ -4752,12 +4793,6 @@
     async function init() {
       startBootSplashPhraseLoop();
       render();
-      window.setTimeout(() => {
-        const splash = document.getElementById('boot-splash');
-        if (splash && !splash.classList.contains('boot-splash--done')) {
-          setBootMessage('Если долго ждёте — сервер мог уснуть на хостинге, сейчас проснётся…');
-        }
-      }, 5000);
       try {
         await loadProfile();
         await loadProducts(true);
