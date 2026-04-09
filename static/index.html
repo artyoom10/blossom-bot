@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Blossom Flower Farm</title>
+  <link rel="preload" href="/miniapp/blossom_logo.png" as="image" type="image/png" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -45,10 +46,29 @@
       position: sticky;
       top: 0;
       z-index: 20;
-      padding: 16px 16px 14px;
+      padding: 12px 16px 14px;
       background: rgba(246,247,248,.94);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(228,232,237,.75);
+    }
+    .header-brand {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .header-brand-text {
+      min-width: 0;
+      flex: 1;
+    }
+    .header-logo {
+      width: 42px;
+      height: 42px;
+      object-fit: contain;
+      flex-shrink: 0;
+      border-radius: 11px;
+      background: var(--surface);
+      border: 1px solid rgba(228,232,237,.9);
+      box-shadow: 0 2px 8px rgba(18,24,32,.06);
     }
     .eyebrow {
       font-size: 11px;
@@ -490,12 +510,22 @@
       padding: 32px 28px;
       max-width: 340px;
     }
-    .boot-flowers {
-      font-size: 52px;
-      line-height: 1;
-      letter-spacing: 8px;
-      margin-bottom: 18px;
+    /* Логотип: положите файл static/blossom_logo.png (URL /miniapp/blossom_logo.png) */
+    .boot-splash__logo-wrap {
+      margin: 0 auto 18px;
+      width: 96px;
+      height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       animation: boot-float 2.4s ease-in-out infinite;
+    }
+    .boot-splash__logo {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      display: block;
+      filter: drop-shadow(0 6px 16px rgba(31, 122, 91, .18));
     }
     @keyframes boot-float {
       0%, 100% { transform: translateY(0); }
@@ -951,9 +981,12 @@
   </style>
 </head>
 <body>
+  <!-- После чёрного экрана Render (пробуждение сервера) показывается этот блок — он уже из вашего HTML -->
   <div id="boot-splash" class="boot-splash" aria-live="polite">
     <div class="boot-splash__inner">
-      <div class="boot-flowers" aria-hidden="true">🌸 🌷 🌼</div>
+      <div class="boot-splash__logo-wrap">
+        <img class="boot-splash__logo" src="/miniapp/blossom_logo.png" width="96" height="96" alt="Blossom Flower Farm" />
+      </div>
       <p class="boot-splash__brand">Blossom Flower Farm</p>
       <h2 class="boot-splash__title">Загружаем сад</h2>
       <p class="boot-splash__msg" id="boot-splash-msg">Связываемся с сервером…</p>
@@ -968,6 +1001,10 @@
       tg.ready();
       tg.expand();
       try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (_) {}
+      try {
+        const bg = tg.themeParams && tg.themeParams.bg_color;
+        if (bg && tg.setHeaderColor) tg.setHeaderColor(bg);
+      } catch (_) {}
     }
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -1573,21 +1610,32 @@
     }
 
     function renderHeader() {
+      const logo = '<img class="header-logo" src="/miniapp/blossom_logo.png" alt="" width="42" height="42" loading="lazy" decoding="async" />';
       if (state.isAdmin) {
         const sub = state.linked && state.salon?.name
           ? escapeHtml(state.salon.name)
           : 'Blossom Flower Farm';
         return `
         <header class="header">
-          <div class="eyebrow">${sub}</div>
-          <h1 class="title">Личный кабинет Админ</h1>
+          <div class="header-brand">
+            ${logo}
+            <div class="header-brand-text">
+              <div class="eyebrow">${sub}</div>
+              <h1 class="title">Личный кабинет Админ</h1>
+            </div>
+          </div>
         </header>`;
       }
       const salonName = state.linked && state.salon?.name ? state.salon.name : 'Гость';
       return `
         <header class="header">
-          <div class="eyebrow">Blossom Flower Farm</div>
-          <h1 class="title">Личный кабинет ${escapeHtml(salonName)}</h1>
+          <div class="header-brand">
+            ${logo}
+            <div class="header-brand-text">
+              <div class="eyebrow">Blossom Flower Farm</div>
+              <h1 class="title">Личный кабинет ${escapeHtml(salonName)}</h1>
+            </div>
+          </div>
         </header>
       `;
     }
