@@ -92,6 +92,10 @@
       margin: 0 auto;
       padding-bottom: 96px;
       background: var(--bg);
+      width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
+      box-sizing: border-box;
     }
 
     .header {
@@ -159,7 +163,9 @@
       display: grid;
       gap: 18px;
       max-width: 100%;
+      min-width: 0;
       overflow-x: hidden;
+      box-sizing: border-box;
     }
 
     .section-head {
@@ -214,7 +220,16 @@
     .category-name { font-weight: 700; font-size: 15px; }
     .category-meta { margin-top: 4px; color: var(--muted); font-size: 13px; }
 
-    .stack { display: grid; gap: 12px; }
+    .stack {
+      display: grid;
+      gap: 12px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .stack > * {
+      min-width: 0;
+    }
 
     .product-card {
       padding: 12px;
@@ -404,8 +419,17 @@
     .detail-label { color: var(--muted); font-size: 12px; }
     .detail-value { margin-top: 6px; font-size: 15px; font-weight: 700; }
 
+    .cart-screen {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
     .cart-item {
       padding: 10px 12px;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
     }
     .cart-item .product-top {
       margin-bottom: 0;
@@ -452,26 +476,48 @@
     .summary {
       width: 100%;
       max-width: 100%;
+      min-width: 0;
       box-sizing: border-box;
       background: #111827;
       color: white;
       border-radius: 28px;
       padding: 18px;
       box-shadow: var(--shadow);
+      overflow: hidden;
     }
     .summary-row {
       display: flex;
       justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
       color: rgba(255,255,255,.7);
       font-size: 13px;
+      min-width: 0;
+    }
+    .summary-row span:first-child {
+      flex: 1;
+      min-width: 0;
+    }
+    .summary-row span:last-child,
+    .summary-total span:last-child {
+      flex-shrink: 0;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
     }
     .summary-total {
       display: flex;
       justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
       margin-top: 14px;
       font-size: 24px;
       font-weight: 700;
       color: white;
+      min-width: 0;
+    }
+    .summary-total span:first-child {
+      flex: 1;
+      min-width: 0;
     }
     .summary-total span:last-child {
       color: white;
@@ -1088,27 +1134,81 @@
       flex: 1;
       min-width: 0;
     }
-    .admin-req-card-footer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-    }
-    .admin-req-expand-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .req-card-toggle {
+      display: block;
       width: 100%;
       border: 0;
       background: transparent;
-      padding: 4px 0 0;
+      padding: 0;
+      margin: 0;
+      text-align: left;
       cursor: pointer;
-      color: inherit;
       font: inherit;
+      color: inherit;
       -webkit-tap-highlight-color: transparent;
+      border-radius: 12px;
+    }
+    .req-card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: 100%;
+      min-width: 0;
+    }
+    .req-card-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+    .req-card-head-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .req-card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+    .req-card-title-line {
+      display: block;
+      width: 100%;
+      min-width: 0;
+    }
+    .req-card-title-line .admin-req-id {
+      display: block;
+    }
+    .req-card-title-row .request-status {
+      flex-shrink: 0;
+      max-width: min(52%, 200px);
+    }
+    .req-card-status-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+      align-self: flex-start;
+      max-width: min(46%, 200px);
+    }
+    .req-card-status-stack .request-status {
+      max-width: 100%;
+      text-align: center;
+    }
+    .req-card-actions-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .admin-req-card-summary-wrap {
+      position: relative;
+      width: 100%;
+      min-width: 0;
     }
     .admin-req-card-top {
       display: block;
@@ -1230,6 +1330,7 @@
       color: var(--text);
       -webkit-appearance: none;
       appearance: none;
+      touch-action: manipulation;
     }
     .qty-stepper:not(.qty-stepper--cart) .qty-input-field {
       flex: 0 1 72px;
@@ -1269,18 +1370,20 @@
       margin-top: 8px;
     }
     .cart-item .qty-stepper--cart .icon-btn.qty-step {
-      min-width: 34px;
-      height: 40px;
-      padding: 0 5px;
+      min-width: 28px;
+      height: 38px;
+      padding: 0 4px;
+      font-size: 11px;
+      font-weight: 800;
     }
     .cart-item .qty-stepper--cart .qty-remove {
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
     }
     .cart-item .qty-stepper--cart .qty-input-field {
-      padding: 10px 6px;
-      font-size: 15px;
+      padding: 8px 4px;
+      font-size: 16px;
     }
     .cart-row {
       max-width: 100%;
@@ -1288,7 +1391,49 @@
     }
     .cart-item .cart-row > div:last-child {
       min-width: 0;
-      overflow: hidden;
+    }
+    .cart-item .product-top > div:first-child {
+      min-width: 0;
+      flex: 1;
+    }
+    .cart-item .product-top > div:last-child {
+      flex-shrink: 0;
+      margin-left: 8px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .qty-stepper--cart-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .qty-stepper--cart-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(44px, 1.35fr) minmax(0, 1fr);
+      align-items: center;
+      gap: 5px;
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    .qty-stepper--cart-row .qty-stepper-deltas {
+      display: flex;
+      gap: 4px;
+      min-width: 0;
+      flex-shrink: 1;
+    }
+    .qty-stepper--cart-row .qty-input-field {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .qty-stepper--cart-stack .qty-remove {
+      align-self: flex-end;
     }
 
     .nav-icon-svg {
@@ -2266,16 +2411,31 @@
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
-    const chevronDownSvg = '<svg class="admin-req-chevron-svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>';
-
     function renderQtyStepper(item, variant) {
       const id = item.id;
       const idKey = String(id);
       const qty = state.cart[id] || state.cart[idKey] || 0;
       if (qty <= 0 && state.qtyDraft[idKey] === undefined) return '';
-      const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
+      if (variant === 'cart') {
+        return `
+        <div class="qty-stepper qty-stepper--cart qty-stepper--cart-stack">
+          <div class="qty-stepper--cart-row">
+            <div class="qty-stepper-deltas">
+              <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-5" aria-label="Минус 5">−5</button>
+              <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-1" aria-label="Минус 1">−1</button>
+            </div>
+            <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-lpignore="true"
+              data-action="qty-input" data-id="${id}" value="" aria-label="Количество стеблей" />
+            <div class="qty-stepper-deltas">
+              <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="1" aria-label="Плюс 1">+1</button>
+              <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="5" aria-label="Плюс 5">+5</button>
+            </div>
+          </div>
+          <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
+        </div>`;
+      }
       return `
-        <div class="qty-stepper qty-stepper--row${extra}">
+        <div class="qty-stepper qty-stepper--row">
           <div class="qty-stepper-deltas">
             <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-5" aria-label="Минус 5">−5</button>
             <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-1" aria-label="Минус 1">−1</button>
@@ -2413,9 +2573,23 @@
       return (p && p.image) ? p.image : '/miniapp/blossom_logo.png';
     }
 
+    function salonImageFromSalonObject(salon) {
+      if (!salon) return '';
+      const u = salon.logo_url || salon.avatar_url || salon.image_url || salon.photo_url;
+      return u && String(u).trim() ? String(u).trim() : '';
+    }
+
     function adminSalonAvatarUrl(item) {
       const u = item && item.salon_logo;
       if (u && String(u).trim()) return String(u).trim();
+      return '/miniapp/blossom_logo.png';
+    }
+
+    function clientSalonAvatarUrl(item) {
+      const u = item && item.salon_logo;
+      if (u && String(u).trim()) return String(u).trim();
+      const fromProfile = salonImageFromSalonObject(state.salon);
+      if (fromProfile) return fromProfile;
       return '/miniapp/blossom_logo.png';
     }
 
@@ -3692,20 +3866,23 @@
       const st = item.status || '';
       const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
       const expanded = !!state.clientExpandedRequestIds[item.id];
+      const av = escapeAttr(clientSalonAvatarUrl(item));
       return `
         <article class="request-card admin-request-card client-request-card status-${stCls}">
-          <div class="admin-req-card-top">
-            <button type="button" class="admin-req-summary-btn" data-action="client-toggle-req" data-id="${item.id}">
-              <div class="admin-req-summary-row">
-                <span class="admin-req-id">Заявка #${item.id}</span>
-                <div class="admin-req-summary-trail">
-                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</span>
-                  <span class="admin-req-chevron-wrap${expanded ? ' is-open' : ''}" aria-hidden="true">${chevronDownSvg}</span>
+          <button type="button" class="req-card-toggle" data-action="client-toggle-req" data-id="${item.id}" aria-expanded="${expanded ? 'true' : 'false'}">
+            <div class="req-card-head">
+              <img class="req-card-avatar" src="${av}" alt="" width="36" height="36" loading="lazy" decoding="async" />
+              <div class="req-card-head-text">
+                <div class="req-card-title-line">
+                  <span class="admin-req-id">Заявка #${item.id}</span>
                 </div>
+                <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
               </div>
-              <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
-            </button>
-          </div>
+              <div class="req-card-status-stack">
+                <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</span>
+              </div>
+            </div>
+          </button>
           <div class="admin-req-details-outer${expanded ? ' is-open' : ''}">
             <div class="admin-req-details-inner">
               <div class="admin-req-details">
@@ -3726,28 +3903,23 @@
       const av = escapeAttr(adminSalonAvatarUrl(item));
       return `
         <article class="request-card admin-request-card status-${stCls}${pulse}">
-          <div class="admin-req-card-top">
-            <div class="admin-req-summary-visual">
-              <div class="admin-req-summary-head">
-                <img class="admin-req-salon-avatar" src="${av}" alt="" width="36" height="36" loading="lazy" decoding="async" />
-                <div class="admin-req-summary-main">
-                  <div class="admin-req-summary-row">
+          <div class="admin-req-card-summary-wrap">
+            <div class="req-card-toggle" tabindex="0" role="button" data-action="admin-toggle-req" data-id="${item.id}" aria-expanded="${expanded ? 'true' : 'false'}">
+              <div class="req-card-head">
+                <img class="req-card-avatar" src="${av}" alt="" width="36" height="36" loading="lazy" decoding="async" />
+                <div class="req-card-head-text">
+                  <div class="req-card-title-line">
                     <span class="admin-req-id">Заявка #${item.id}</span>
-                    <div class="admin-req-summary-trail">
-                      <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
-                    </div>
                   </div>
                   ${item.salon_name ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>` : ''}
                   <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
                 </div>
+                <div class="req-card-status-stack">
+                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
+                  ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
+                </div>
               </div>
             </div>
-          </div>
-          <div class="admin-req-card-footer">
-            <button type="button" class="admin-req-expand-btn" data-action="admin-toggle-req" data-id="${item.id}" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="Подробнее по заявке">
-              <span class="admin-req-chevron-wrap${expanded ? ' is-open' : ''}" aria-hidden="true">${chevronDownSvg}</span>
-            </button>
-            ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
           </div>
           <div class="admin-req-details-outer${expanded ? ' is-open' : ''}">
             <div class="admin-req-details-inner">
@@ -3973,8 +4145,8 @@
       const tabs = [
         ['home', iconNav.home, 'Каталог'],
         ['orders', iconNav.orders, 'Заявки'],
-        ['cart', iconNav.cart, 'Корзина'],
         ['profile', iconNav.person, 'Профиль'],
+        ['cart', iconNav.cart, 'Корзина'],
       ];
       return `
         <nav class="bottom-nav">
@@ -4252,7 +4424,7 @@
         qtyInputBlurTimer = window.setTimeout(() => {
           qtyInputBlurTimer = null;
           setQtyFromInput(pid, val);
-        }, 200);
+        }, 120);
       },
       true,
     );

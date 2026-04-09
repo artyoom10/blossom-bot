@@ -29,7 +29,7 @@ REQUESTS_SELECT_FULL = (
     "id,status,salon_id,salon_name,total_amount,total_stems,items,created_at,updated_at,manager_note,previous_items,"
     "delivery_date,previous_delivery_date"
 )
-REQUESTS_SELECT_BASIC = "id,status,salon_name,total_amount,total_stems,items,created_at,updated_at"
+REQUESTS_SELECT_BASIC = "id,status,salon_id,salon_name,total_amount,total_stems,items,created_at,updated_at"
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -402,18 +402,25 @@ def build_telegram_link(user_id: Any, username: Optional[str], full_name: str) -
 
 
 def load_salon_by_tg(telegram_id: int | str) -> Optional[Dict[str, Any]]:
-    r = supabase_get(
-        "salons",
-        {
-            "select": "id,name,tg_chat,address,phone,created_at,contact_name",
-            "tg_chat": f"eq.{telegram_id}",
-            "limit": 1,
-        },
-    )
-    if not r.ok:
-        raise RuntimeError(r.text)
-    rows = r.json() or []
-    return rows[0] if rows else None
+    last_err = ""
+    for sel in (
+        "id,name,tg_chat,address,phone,created_at,contact_name,logo_url,avatar_url,image_url,photo_url",
+        "id,name,tg_chat,address,phone,created_at,contact_name,logo_url",
+        "id,name,tg_chat,address,phone,created_at,contact_name",
+    ):
+        r = supabase_get(
+            "salons",
+            {
+                "select": sel,
+                "tg_chat": f"eq.{telegram_id}",
+                "limit": 1,
+            },
+        )
+        if r.ok:
+            rows = r.json() or []
+            return rows[0] if rows else None
+        last_err = r.text or last_err
+    raise RuntimeError(last_err or "salons request failed")
 
 
 def load_flower_types() -> List[Dict[str, Any]]:
@@ -1085,8 +1092,16 @@ def load_all_requests_admin(*, limit: int = 300) -> List[Dict[str, Any]]:
     return r2.json() or []
 
 
+def _salon_image_url_from_row(salon_row: Dict[str, Any]) -> Optional[str]:
+    for k in ("logo_url", "avatar_url", "image_url", "photo_url"):
+        v = salon_row.get(k)
+        if v and str(v).strip():
+            return str(v).strip()
+    return None
+
+
 def enrich_requests_with_salon_logos(rows: List[Dict[str, Any]]) -> None:
-    """Добавляет salon_logo из таблицы salons (колонка logo_url), если есть."""
+    """Добавляет salon_logo из salons (первое непустое из logo_url / avatar_url / …)."""
     ids: List[Any] = []
     seen: Set[Any] = set()
     for row in rows:
@@ -1101,16 +1116,24 @@ def enrich_requests_with_salon_logos(rows: List[Dict[str, Any]]) -> None:
         q = ",".join(str(x) for x in ids)
         r = supabase_get(
             "salons",
-            {"select": "id,logo_url", "id": f"in.({q})"},
+            {"select": "id,logo_url,avatar_url,image_url,photo_url", "id": f"in.({q})"},
         )
         if not r.ok:
-            return
-        by_id = {x.get("id"): x.get("logo_url") for x in (r.json() or [])}
+            r = supabase_get(
+                "salons",
+                {"select": "id,logo_url", "id": f"in.({q})"},
+            )
+            if not r.ok:
+                return
+        by_id: Dict[Any, Dict[str, Any]] = {x.get("id"): x for x in (r.json() or [])}
         for row in rows:
             sid = row.get("salon_id")
-            url = by_id.get(sid) if sid is not None else None
+            srow = by_id.get(sid) if sid is not None else None
+            if not srow:
+                continue
+            url = _salon_image_url_from_row(srow)
             if url:
-                row["salon_logo"] = str(url).strip()
+                row["salon_logo"] = url
     except Exception:
         return
 
@@ -1125,7 +1148,9 @@ def load_requests_for_user(telegram_id: int | str) -> List[Dict[str, Any]]:
         },
     )
     if r.ok:
-        return r.json() or []
+        rows = r.json() or []
+        enrich_requests_with_salon_logos(rows)
+        return rows
     r2 = supabase_get(
         REQUESTS_TABLE,
         {
@@ -1136,7 +1161,9 @@ def load_requests_for_user(telegram_id: int | str) -> List[Dict[str, Any]]:
     )
     if not r2.ok:
         raise RuntimeError(r2.text)
-    return r2.json() or []
+    rows = r2.json() or []
+    enrich_requests_with_salon_logos(rows)
+    return rows
 
 
 @app.post("/api/my-requests")
