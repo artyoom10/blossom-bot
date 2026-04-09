@@ -884,93 +884,73 @@
     .actions--single .btn { flex: none; width: 100%; }
 
     .qty-stepper {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
       width: 100%;
       margin-top: 8px;
     }
-    .qty-step .qty-delta-lbl {
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
+    .qty-stepper--row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 6px;
     }
-    .qty-display-btn {
+    .qty-stepper-deltas {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .qty-stepper--row .qty-input-field {
       flex: 1;
-      min-width: 56px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      font-weight: 800;
-      font-size: 16px;
-      font-variant-numeric: tabular-nums;
-      cursor: pointer;
-      color: var(--text);
+      min-width: 0;
+      max-width: none;
     }
-    .qty-numpad-overlay {
+    .cart-checkout-bar {
       position: fixed;
-      inset: 0;
-      z-index: 300;
-      background: rgba(15, 23, 42, 0.45);
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      padding: max(12px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(430px, 100%);
+      padding: 0 16px 10px;
+      bottom: calc(58px + max(8px, env(safe-area-inset-bottom)));
+      z-index: 35;
+      pointer-events: none;
     }
-    .qty-numpad-panel {
-      width: min(360px, 100%);
-      background: var(--surface);
-      border-radius: 24px 24px 16px 16px;
-      padding: 16px 16px 20px;
-      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.15);
-    }
-    .qty-numpad-display {
-      text-align: center;
-      font-size: 32px;
+    .cart-checkout-glow-btn {
+      pointer-events: auto;
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-size: 16px;
       font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      padding: 12px 8px;
-      margin-bottom: 12px;
-      border-radius: 16px;
-      background: var(--surface-soft);
-      border: 1px solid var(--border);
-    }
-    .qty-numpad-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-    }
-    .qty-numpad-grid button {
-      padding: 14px 8px;
-      font-size: 20px;
-      font-weight: 700;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: var(--bg);
+      color: #fff;
+      background: linear-gradient(145deg, #1f7a5b 0%, #2d9d78 55%, #1a6b50 100%);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+        0 8px 28px rgba(31, 122, 91, 0.45),
+        0 0 32px rgba(45, 157, 120, 0.35);
       cursor: pointer;
     }
-    .qty-numpad-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
+    .cart-checkout-glow-btn:active {
+      transform: scale(0.99);
     }
-    .qty-numpad-actions button {
-      flex: 1;
-      padding: 14px;
-      font-weight: 700;
-      border-radius: 14px;
-      border: 1px solid var(--border);
+    .checkout-submit-glow {
+      width: 100%;
+      margin-top: 18px;
+      border: 0;
+      border-radius: 18px;
+      padding: 16px 18px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      background: linear-gradient(145deg, #1f7a5b 0%, #2d9d78 55%, #1a6b50 100%);
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+        0 8px 28px rgba(31, 122, 91, 0.45),
+        0 0 28px rgba(45, 157, 120, 0.3);
       cursor: pointer;
     }
-    .qty-numpad-back {
-      background: var(--surface-soft);
-    }
-    .qty-numpad-ok {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
+    .checkout-submit-glow:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
     }
     .cart-fab {
       position: fixed;
@@ -993,6 +973,9 @@
     .cart-fab .nav-icon-svg {
       width: 26px;
       height: 26px;
+    }
+    .cart-screen--has-checkout {
+      padding-bottom: 88px;
     }
     .cart-fab-badge {
       position: absolute;
@@ -1027,50 +1010,86 @@
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
-    .admin-req-card .request-head-meta-col {
+    .admin-req-summary-row {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-      text-align: right;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+    }
+    .admin-req-id {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      min-width: 0;
+    }
+    .admin-req-summary-trail {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       flex-shrink: 0;
     }
-    .admin-req-card .request-head-meta-col .request-status {
-      white-space: nowrap;
-      max-width: 100%;
-    }
-    .request-datetime-line {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
+    .admin-req-summary-trail .request-status {
+      max-width: min(200px, 48vw);
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .admin-req-chevron {
-      font-size: 10px;
+    .admin-req-chevron-wrap {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
       color: var(--muted);
-      margin-left: 6px;
       flex-shrink: 0;
-      transition: transform 0.2s ease;
+      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
-    .admin-req-chevron--open {
-      transform: rotate(-180deg);
+    .admin-req-chevron-wrap.is-open {
+      transform: rotate(180deg);
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-color: #b8e1cf;
+    }
+    .admin-req-chevron-svg {
+      display: block;
     }
     .admin-req-tiny-preview {
       margin-top: 8px;
       font-size: 13px;
       font-weight: 700;
     }
+    .admin-req-details-outer {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .admin-req-details-outer.is-open {
+      grid-template-rows: 1fr;
+    }
+    .admin-req-details-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
     .admin-req-details {
-      margin-top: 0;
       padding-top: 12px;
+      margin-top: 10px;
       border-top: 1px solid var(--border);
+    }
+    .admin-created-line {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
     }
     .admin-request-card + .admin-request-card,
     .admin-salon-block .admin-request-card {
-      margin-top: 12px;
+      margin-top: 16px;
     }
     .admin-salon-block .admin-request-card:first-child {
-      margin-top: 10px;
+      margin-top: 12px;
     }
     .qty-stepper--cart {
       margin-top: 0;
@@ -1124,29 +1143,23 @@
       min-width: 0;
     }
     .cart-item .qty-stepper--cart {
-      display: grid;
-      grid-template-columns: 40px 58px 40px 40px;
-      gap: 6px;
-      align-items: center;
-      width: 100%;
-      max-width: 220px;
-      min-width: 0;
-      flex: 0 1 auto;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .cart-item .qty-stepper--cart .icon-btn {
-      width: 40px;
-      height: 40px;
-      min-width: 40px;
-      flex-shrink: 0;
-    }
-    .cart-item .qty-stepper--cart .qty-input-field {
-      min-width: 0;
       width: 100%;
       max-width: 100%;
-      padding: 8px 4px;
-      font-size: 14px;
+      margin-top: 8px;
+    }
+    .cart-item .qty-stepper--cart .icon-btn.qty-step {
+      min-width: 34px;
+      height: 40px;
+      padding: 0 5px;
+    }
+    .cart-item .qty-stepper--cart .qty-remove {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+    }
+    .cart-item .qty-stepper--cart .qty-input-field {
+      padding: 10px 6px;
+      font-size: 15px;
     }
     .cart-row {
       max-width: 100%;
@@ -1552,11 +1565,11 @@
       align-items: center;
       margin-top: 8px;
     }
-    .product-card .qty-stepper {
+    .product-card .qty-stepper--row {
       justify-content: center;
       margin-left: auto;
       margin-right: auto;
-      max-width: 300px;
+      max-width: 100%;
       margin-top: 6px;
     }
     .catalog-loading-screen {
@@ -1930,8 +1943,6 @@
       pendingNotice: '',
       /** Админ: раскрытая заявка id → true */
       adminExpandedRequestIds: {},
-      /** Модальное окно количества: { productId, buffer } */
-      qtyNumpad: null,
     };
 
     let lastOverlaySyncKey = '\x00';
@@ -2103,6 +2114,7 @@
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+    const chevronDownSvg = '<svg class="admin-req-chevron-svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>';
 
     function renderQtyStepper(item, variant) {
       const id = item.id;
@@ -2110,46 +2122,35 @@
       const qty = state.cart[id] || state.cart[idKey] || 0;
       if (qty <= 0 && state.qtyDraft[idKey] === undefined) return '';
       const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
-      let displayQty = qty;
-      if (state.qtyDraft[idKey] !== undefined) {
-        const p = parseInt(String(state.qtyDraft[idKey]).replace(/\D/g, ''), 10);
-        if (Number.isFinite(p)) displayQty = p;
-      }
       return `
-        <div class="qty-stepper${extra}">
-          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-5" aria-label="Минус 5">−5</button>
-          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-1" aria-label="Минус 1">−1</button>
-          <button type="button" class="qty-display-btn" data-action="qty-open-numpad" data-id="${id}" aria-label="Ввести количество">${displayQty}</button>
-          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="1" aria-label="Плюс 1">+1</button>
-          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="5" aria-label="Плюс 5">+5</button>
+        <div class="qty-stepper qty-stepper--row${extra}">
+          <div class="qty-stepper-deltas">
+            <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-5" aria-label="Минус 5">−5</button>
+            <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-1" aria-label="Минус 1">−1</button>
+          </div>
+          <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-lpignore="true"
+            data-action="qty-input" data-id="${id}" value="" aria-label="Количество стеблей" />
+          <div class="qty-stepper-deltas">
+            <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="1" aria-label="Плюс 1">+1</button>
+            <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="5" aria-label="Плюс 5">+5</button>
+          </div>
           <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
         </div>
       `;
     }
 
-    function renderQtyNumpad() {
-      const np = state.qtyNumpad;
-      if (!np) return '';
-      const buf = np.buffer != null ? String(np.buffer) : '0';
-      return `
-        <div class="qty-numpad-overlay" data-action="qty-numpad-dismiss">
-          <div class="qty-numpad-panel" onclick="event.stopPropagation()">
-            <div class="qty-numpad-display">${escapeHtml(buf)}</div>
-            <div class="qty-numpad-grid">
-              ${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => `<button type="button" data-action="qty-numpad-digit" data-digit="${d}">${d}</button>`).join('')}
-            </div>
-            <div class="qty-numpad-grid" style="grid-template-columns:repeat(3,1fr);margin-top:8px;">
-              <button type="button" class="qty-numpad-back" data-action="qty-numpad-clear">C</button>
-              <button type="button" data-action="qty-numpad-digit" data-digit="0">0</button>
-              <button type="button" class="qty-numpad-back" data-action="qty-numpad-back">⌫</button>
-            </div>
-            <div class="qty-numpad-actions">
-              <button type="button" class="qty-numpad-back" data-action="qty-numpad-dismiss">Отмена</button>
-              <button type="button" class="qty-numpad-ok" data-action="qty-numpad-ok">✓</button>
-            </div>
-          </div>
-        </div>
-      `;
+    function syncQtyInputsFromState(root) {
+      const scope = root || document.getElementById('app') || document;
+      if (!scope.querySelectorAll) return;
+      scope.querySelectorAll('[data-action="qty-input"]').forEach((inp) => {
+        const pid = inp.dataset.id;
+        if (pid == null) return;
+        if (document.activeElement === inp) return;
+        const k = String(pid);
+        const q = state.cart[pid] || state.cart[k] || 0;
+        const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(q > 0 ? q : '');
+        inp.value = displayVal;
+      });
     }
 
     function renderCartFab() {
@@ -2220,7 +2221,6 @@
 
     function setActiveTab(tab) {
       state.activeTab = tab;
-      state.qtyNumpad = null;
       if (tab === 'admin' && state.isAdmin) {
         loadAdminCatalog();
       }
@@ -2749,9 +2749,9 @@
       }
       if (!product.available) return;
       delete state.qtyDraft[String(product.id)];
-      state.cart[product.id] = 15;
+      state.cart[product.id] = 5;
       haptic('light');
-      showNotice(`${product.name} · 15 стеблей в корзине`);
+      showNotice(`${product.name} · 5 стеблей в корзине`);
     }
 
     function changeQty(productId, delta) {
@@ -2906,26 +2906,7 @@
       try { tg.MainButton.offClick(goToCheckout); } catch (_) {}
       try { tg.MainButton.offClick(openCart); } catch (_) {}
       try { tg.BackButton.offClick(goBack); } catch (_) {}
-
-      const count = cartCount();
-      if (state.activeTab === 'home' && count > 0) {
-        tg.MainButton.setText(`Корзина · ${count}`);
-        tg.MainButton.show();
-        tg.MainButton.enable();
-        tg.MainButton.onClick(openCart);
-      } else if (state.activeTab === 'cart' && count > 0) {
-        tg.MainButton.setText('Оформить заявку');
-        tg.MainButton.show();
-        tg.MainButton.enable();
-        tg.MainButton.onClick(goToCheckout);
-      } else if (state.activeTab === 'checkout' && count > 0) {
-        tg.MainButton.setText(state.submitting ? 'Отправляем...' : `Отправить заявку · ${money(cartTotal())}`);
-        tg.MainButton.show();
-        if (state.submitting) tg.MainButton.disable(); else tg.MainButton.enable();
-        tg.MainButton.onClick(submitOrder);
-      } else {
-        tg.MainButton.hide();
-      }
+      try { tg.MainButton.hide(); } catch (_) {}
 
       if (state.adminEditor || state.activeTab === 'product' || state.activeTab === 'checkout') {
         tg.BackButton.show();
@@ -2952,11 +2933,6 @@
       if (state.adminEditor) {
         state.adminEditor = null;
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        render();
-        return;
-      }
-      if (state.qtyNumpad) {
-        state.qtyNumpad = null;
         render();
         return;
       }
@@ -3132,8 +3108,9 @@
 
     function renderCart() {
       const items = cartItems();
+      const has = items.length > 0;
       return `
-        <section class="stack">
+        <section class="stack cart-screen${has ? ' cart-screen--has-checkout' : ''}">
           <div class="panel">
             <div class="section-head" style="margin-bottom:0;">
               <h2 class="section-title">Корзина</h2>
@@ -3141,7 +3118,7 @@
             </div>
             <div class="muted" style="margin-top:6px;">Соберите заявку для менеджера фермы</div>
           </div>
-          ${!items.length ? `<div class="empty">Корзина пока пустая. Добавьте позиции из каталога.</div>` : `
+          ${!has ? `<div class="empty">Корзина пока пустая. Добавьте позиции из каталога.</div>` : `
             <div class="stack">
               ${items.map((item) => `
                 <article class="card cart-item">
@@ -3166,8 +3143,10 @@
                 <div class="summary-row"><span>Позиций</span><span>${items.length}</span></div>
                 <div class="summary-row" style="margin-top:8px;"><span>Стеблей</span><span>${cartCount()}</span></div>
                 <div class="summary-total"><span>Итого</span><span>${money(cartTotal())}</span></div>
-                <div class="summary-note">Для отправки заявки используйте системную кнопку Telegram снизу.</div>
               </div>
+            </div>
+            <div class="cart-checkout-bar">
+              <button type="button" class="cart-checkout-glow-btn" data-action="go-checkout">Оформить заказ · ${money(cartTotal())}</button>
             </div>
           `}
         </section>
@@ -3183,7 +3162,7 @@
         <section class="stack">
           <div class="panel checkout-panel">
             <h2 class="section-title">Оформление заявки</h2>
-            <p class="muted" style="margin-top:6px;line-height:1.45;">Проверьте состав и дату, затем отправьте заявку системной кнопкой Telegram внизу.</p>
+            <p class="muted" style="margin-top:6px;line-height:1.45;">Проверьте состав и дату поставки, затем отправьте заявку.</p>
             <div class="checkout-date-row-ui">
               <div class="checkout-date-text-block">
                 <span class="checkout-muted-label">Желаемая дата</span>
@@ -3212,7 +3191,7 @@
               <div class="checkout-total-pill"><span>Стеблей</span><strong>${cartCount()}</strong></div>
               <div class="checkout-total-pill checkout-total-pill--sum"><span>Итого</span><strong>${money(cartTotal())}</strong></div>
             </div>
-            <div class="success" style="margin-top:14px;">Нажмите системную кнопку Telegram снизу, чтобы отправить заявку.</div>
+            <button type="button" class="checkout-submit-glow" data-action="submit-order" ${state.submitting ? 'disabled' : ''}>${state.submitting ? 'Отправляем…' : `Отправить заявку · ${money(cartTotal())}`}</button>
           </div>
         </section>
       `;
@@ -3296,6 +3275,9 @@
       const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
       const dWeek = dIso ? weekdayFullRu(dIso) : '';
       const canAct = item.status === 'new' || item.status === 'change_requested';
+      const createdLine = item.created_at
+        ? `<div class="admin-created-line muted">Создана: ${escapeHtml(formatAdminShortDate(item.created_at))} · ${escapeHtml(formatAdminTime(item.created_at))}</div>`
+        : '';
       const adminRejectedNote = item.manager_note && st === 'rejected'
         ? `<div class="request-cancel-note"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>`
         : '';
@@ -3307,6 +3289,7 @@
           `
         : '';
       return `
+              ${createdLine}
               <div class="request-stat-strip">
                 <div class="request-stat-cell">
                   <span class="request-stat-label">Стеблей</span>
@@ -3499,7 +3482,7 @@
       const dates = [...byDate.keys()].sort((a, b) => {
         if (a === 'unknown') return 1;
         if (b === 'unknown') return -1;
-        return a.localeCompare(b);
+        return b.localeCompare(a);
       });
       return dates.map((dayKey) => {
         const rows = byDate.get(dayKey);
@@ -3527,27 +3510,28 @@
       const pulse = state.adminHighlightId === item.id ? ' request-card--pulse' : '';
       const expanded = !!state.adminExpandedRequestIds[item.id];
       const canDelete = st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client';
-      const datePart = formatAdminShortDate(item.created_at);
-      const timePart = formatAdminTime(item.created_at);
       return `
         <article class="request-card admin-request-card status-${stCls}${pulse}">
           <div class="admin-req-card-top">
             <button type="button" class="admin-req-summary-btn" data-action="admin-toggle-req" data-id="${item.id}">
-              <div class="request-card-headline">
-                <span class="request-id">Заявка #${item.id}</span>
-                <div class="request-head-meta-col">
+              <div class="admin-req-summary-row">
+                <span class="admin-req-id">Заявка #${item.id}</span>
+                <div class="admin-req-summary-trail">
                   <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
-                  <span class="request-datetime-line">${escapeHtml(datePart)} · ${escapeHtml(timePart)}</span>
+                  <span class="admin-req-chevron-wrap${expanded ? ' is-open' : ''}" aria-hidden="true">${chevronDownSvg}</span>
                 </div>
-                <span class="admin-req-chevron ${expanded ? 'admin-req-chevron--open' : ''}" aria-hidden="true">▼</span>
               </div>
               ${item.salon_name ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>` : ''}
               <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
             </button>
             ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
           </div>
-          <div class="admin-req-details"${expanded ? '' : ' hidden'}>
-            ${buildAdminRequestDetailsInner(item)}
+          <div class="admin-req-details-outer${expanded ? ' is-open' : ''}">
+            <div class="admin-req-details-inner">
+              <div class="admin-req-details">
+                ${buildAdminRequestDetailsInner(item)}
+              </div>
+            </div>
           </div>
         </article>
       `;
@@ -3776,6 +3760,17 @@
         }, 2500);
       }
       const app = document.getElementById('app');
+      const ae = document.activeElement;
+      let qtyFocusId = null;
+      let qtySelStart = null;
+      let qtySelEnd = null;
+      if (ae && ae.getAttribute && ae.getAttribute('data-action') === 'qty-input' && ae.dataset && ae.dataset.id != null) {
+        qtyFocusId = String(ae.dataset.id);
+        try {
+          qtySelStart = ae.selectionStart;
+          qtySelEnd = ae.selectionEnd;
+        } catch (_) {}
+      }
       const screen = state.activeTab === 'admin' ? renderAdmin()
         : state.activeTab === 'home' ? renderHome()
         : state.activeTab === 'product' ? renderProduct()
@@ -3797,8 +3792,22 @@
         </div>
         ${renderAdminEditorModal()}
         ${renderRejectModal()}
-        ${renderQtyNumpad()}
       `;
+
+      syncQtyInputsFromState(app);
+      if (qtyFocusId != null) {
+        const inp = app.querySelector('[data-action="qty-input"][data-id="' + qtyFocusId + '"]');
+        if (inp && typeof inp.focus === 'function') {
+          const k = String(qtyFocusId);
+          const q = state.cart[qtyFocusId] || state.cart[k] || 0;
+          const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(q > 0 ? q : '');
+          inp.value = displayVal;
+          inp.focus();
+          if (qtySelStart != null && typeof inp.setSelectionRange === 'function') {
+            try { inp.setSelectionRange(qtySelStart, qtySelEnd); } catch (_) {}
+          }
+        }
+      }
 
       updateTelegramButtons();
       syncGlobalOverlay();
@@ -3825,6 +3834,12 @@
     });
     document.addEventListener('input', (event) => {
       const t = event.target;
+      if (t && t.matches && t.matches('[data-action="qty-input"]')) {
+        event.stopPropagation();
+        const pid = t.dataset.id;
+        if (pid != null) state.qtyDraft[String(pid)] = t.value;
+        return;
+      }
       if (t && t.matches && t.matches('[data-admin-flower-price]')) {
         const fid = Number(t.dataset.id);
         const f = state.adminFlowers.find((x) => x.id === fid);
@@ -3871,50 +3886,11 @@
         const d = Number(target.dataset.delta);
         if (Number.isFinite(d)) changeQty(id, d);
       }
-      if (action === 'qty-open-numpad') {
-        const pid = id != null ? Number(id) : NaN;
-        if (!Number.isFinite(pid)) return;
-        const k = String(pid);
-        const qty = state.cart[pid] || state.cart[k] || 0;
-        let buf = qty > 0 ? String(qty) : '0';
-        if (state.qtyDraft[k] !== undefined) {
-          const raw = String(state.qtyDraft[k]).replace(/\D/g, '');
-          buf = raw || '0';
-        }
-        state.qtyNumpad = { productId: pid, buffer: buf };
-        render();
+      if (action === 'go-checkout') {
+        goToCheckout();
       }
-      if (action === 'qty-numpad-digit') {
-        const dig = target.dataset.digit;
-        if (dig == null || !state.qtyNumpad) return;
-        let b = String(state.qtyNumpad.buffer || '').replace(/\D/g, '');
-        if (b === '' || b === '0') b = dig;
-        else b = b + dig;
-        if (b.length > 1) b = b.replace(/^0+/, '') || '0';
-        if (b.length > 5) b = b.slice(0, 5);
-        state.qtyNumpad.buffer = b;
-        render();
-      }
-      if (action === 'qty-numpad-back') {
-        if (!state.qtyNumpad) return;
-        let b = String(state.qtyNumpad.buffer || '0');
-        state.qtyNumpad.buffer = b.length > 1 ? b.slice(0, -1) : '0';
-        render();
-      }
-      if (action === 'qty-numpad-clear') {
-        if (state.qtyNumpad) state.qtyNumpad.buffer = '0';
-        render();
-      }
-      if (action === 'qty-numpad-dismiss') {
-        state.qtyNumpad = null;
-        render();
-      }
-      if (action === 'qty-numpad-ok') {
-        const np = state.qtyNumpad;
-        state.qtyNumpad = null;
-        if (!np) return;
-        delete state.qtyDraft[String(np.productId)];
-        setQtyFromInput(np.productId, np.buffer || '0');
+      if (action === 'submit-order') {
+        await submitOrder();
       }
       if (action === 'admin-toggle-req') {
         const rid = Number(id);
@@ -4002,6 +3978,34 @@
         .replace(/'/g, '&#039;');
     }
     function escapeAttr(value) { return escapeHtml(value); }
+
+    let qtyInputBlurTimer = null;
+    document.addEventListener(
+      'pointerdown',
+      (event) => {
+        const el = event.target && event.target.closest ? event.target.closest('[data-action]') : null;
+        if (!el) return;
+        const a = el.dataset.action;
+        if (a === 'qty-delta' || a === 'remove') window.clearTimeout(qtyInputBlurTimer);
+      },
+      true,
+    );
+    document.addEventListener(
+      'focusout',
+      (event) => {
+        const t = event.target;
+        if (!t || !t.getAttribute || t.getAttribute('data-action') !== 'qty-input') return;
+        const pid = t.dataset.id;
+        if (pid == null) return;
+        const val = t.value;
+        window.clearTimeout(qtyInputBlurTimer);
+        qtyInputBlurTimer = window.setTimeout(() => {
+          qtyInputBlurTimer = null;
+          setQtyFromInput(pid, val);
+        }, 200);
+      },
+      true,
+    );
 
     async function init() {
       render();
