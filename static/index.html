@@ -274,6 +274,15 @@
       justify-content: center;
       color: var(--text);
     }
+    .qty-stepper .icon-btn.qty-step {
+      width: auto;
+      min-width: 36px;
+      height: 40px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
 
     .product-hero-frame {
       position: relative;
@@ -715,6 +724,9 @@
     .nav-grid.cols-4 {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+    .nav-grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
     .nav-grid.cols-5 {
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 4px;
@@ -873,10 +885,192 @@
 
     .qty-stepper {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       width: 100%;
       margin-top: 8px;
+    }
+    .qty-step .qty-delta-lbl {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .qty-display-btn {
+      flex: 1;
+      min-width: 56px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-weight: 800;
+      font-size: 16px;
+      font-variant-numeric: tabular-nums;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .qty-numpad-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: max(12px, env(safe-area-inset-bottom));
+    }
+    .qty-numpad-panel {
+      width: min(360px, 100%);
+      background: var(--surface);
+      border-radius: 24px 24px 16px 16px;
+      padding: 16px 16px 20px;
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.15);
+    }
+    .qty-numpad-display {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      padding: 12px 8px;
+      margin-bottom: 12px;
+      border-radius: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+    }
+    .qty-numpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .qty-numpad-grid button {
+      padding: 14px 8px;
+      font-size: 20px;
+      font-weight: 700;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+    }
+    .qty-numpad-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .qty-numpad-actions button {
+      flex: 1;
+      padding: 14px;
+      font-weight: 700;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .qty-numpad-back {
+      background: var(--surface-soft);
+    }
+    .qty-numpad-ok {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .cart-fab {
+      position: fixed;
+      right: max(14px, env(safe-area-inset-right));
+      bottom: calc(68px + max(8px, env(safe-area-inset-bottom)));
+      z-index: 40;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 0;
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 10px 28px rgba(31, 122, 91, 0.35);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .cart-fab .nav-icon-svg {
+      width: 26px;
+      height: 26px;
+    }
+    .cart-fab-badge {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .admin-req-card-top {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .admin-req-summary-btn {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .admin-req-card .request-head-meta-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .admin-req-card .request-head-meta-col .request-status {
+      white-space: nowrap;
+      max-width: 100%;
+    }
+    .request-datetime-line {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .admin-req-chevron {
+      font-size: 10px;
+      color: var(--muted);
+      margin-left: 6px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    .admin-req-chevron--open {
+      transform: rotate(-180deg);
+    }
+    .admin-req-tiny-preview {
+      margin-top: 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .admin-req-details {
+      margin-top: 0;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .admin-request-card + .admin-request-card,
+    .admin-salon-block .admin-request-card {
+      margin-top: 12px;
+    }
+    .admin-salon-block .admin-request-card:first-child {
+      margin-top: 10px;
     }
     .qty-stepper--cart {
       margin-top: 0;
@@ -1380,6 +1574,19 @@
     .catalog-loading-screen .action-overlay-spinner {
       margin: 0;
     }
+    .catalog-loading-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      border-radius: 18px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 14px;
+    }
     .checkout-date-block {
       margin-top: 8px;
     }
@@ -1660,7 +1867,7 @@
         <img class="boot-splash__logo" src="/miniapp/blossom_logo.png" width="96" height="96" alt="Blossom Flower Farm" />
       </div>
       <p class="boot-splash__brand">Blossom Flower Farm</p>
-      <h2 class="boot-splash__title">Blossom</h2>
+      <h2 class="boot-splash__title"></h2>
       <p class="boot-splash__msg" id="boot-splash-msg">Связываемся с сервером…</p>
       <div class="boot-dots" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
@@ -1721,6 +1928,10 @@
       adminHighlightId: null,
       /** Тост, отложенный пока виден оверлей */
       pendingNotice: '',
+      /** Админ: раскрытая заявка id → true */
+      adminExpandedRequestIds: {},
+      /** Модальное окно количества: { productId, buffer } */
+      qtyNumpad: null,
     };
 
     let lastOverlaySyncKey = '\x00';
@@ -1854,20 +2065,29 @@
       window.setTimeout(() => el.remove(), 420);
     }
 
+    function splashGreetingWord() {
+      const h = new Date().getHours();
+      if (h >= 4 && h < 12) return 'Доброе утро';
+      if (h >= 12 && h < 18) return 'Добрый день';
+      if (h >= 18 && h < 24) return 'Добрый вечер';
+      return 'Доброй ночи';
+    }
+
+    function splashDisplayName() {
+      const salon = state.salon;
+      const cn = salon && salon.contact_name != null ? String(salon.contact_name).trim() : '';
+      if (cn) return cn;
+      if (state.telegramName && state.telegramName !== 'Гость') return String(state.telegramName).trim();
+      if (salon && salon.name) return String(salon.name).trim();
+      return 'коллега';
+    }
+
     function updateBootSplashGreeting() {
       const titleEl = document.querySelector('.boot-splash__title');
       if (!titleEl) return;
-      const salon = state.salon;
-      let nm = salon && (salon.contact_name || salon.name) ? String(salon.contact_name || salon.name).trim() : '';
-      if (!nm && state.telegramName && state.telegramName !== 'Гость') nm = String(state.telegramName).trim();
-      if (!nm) nm = 'коллега';
-      const h = new Date().getHours();
-      let g = 'Добрый вечер';
-      if (h >= 4 && h < 12) g = 'Доброе утро';
-      else if (h >= 12 && h < 24) g = 'Добрый вечер';
-      else g = 'Доброй ночи';
-      titleEl.textContent = `${g}, ${nm}`;
+      titleEl.textContent = `${splashGreetingWord()}, ${splashDisplayName()}`;
     }
+    updateBootSplashGreeting();
 
     /** Остаток: свободно + зарезервировано в заявках (серый замок). */
     function productStockLine(item) {
@@ -1890,29 +2110,56 @@
       const qty = state.cart[id] || state.cart[idKey] || 0;
       if (qty <= 0 && state.qtyDraft[idKey] === undefined) return '';
       const extra = variant === 'cart' ? ' qty-stepper--cart' : '';
+      let displayQty = qty;
+      if (state.qtyDraft[idKey] !== undefined) {
+        const p = parseInt(String(state.qtyDraft[idKey]).replace(/\D/g, ''), 10);
+        if (Number.isFinite(p)) displayQty = p;
+      }
       return `
         <div class="qty-stepper${extra}">
-          <button type="button" class="icon-btn qty-step" data-action="qty-minus" data-id="${id}" aria-label="Уменьшить на 5" onmousedown="event.preventDefault()">−</button>
-          <input type="text" class="qty-input-field" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-lpignore="true"
-            data-action="qty-input" data-id="${id}" value="" aria-label="Количество стеблей" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" />
-          <button type="button" class="icon-btn qty-step" data-action="qty-plus" data-id="${id}" aria-label="Добавить 5" onmousedown="event.preventDefault()">+</button>
+          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-5" aria-label="Минус 5">−5</button>
+          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="-1" aria-label="Минус 1">−1</button>
+          <button type="button" class="qty-display-btn" data-action="qty-open-numpad" data-id="${id}" aria-label="Ввести количество">${displayQty}</button>
+          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="1" aria-label="Плюс 1">+1</button>
+          <button type="button" class="icon-btn qty-step" data-action="qty-delta" data-id="${id}" data-delta="5" aria-label="Плюс 5">+5</button>
           <button type="button" class="icon-btn qty-remove" data-action="remove" data-id="${id}" aria-label="Убрать из корзины" onmousedown="event.preventDefault()">${trashIconSvg}</button>
         </div>
       `;
     }
 
-    /** После render() подставляет value в поля количества из state (не трогает поле в фокусе — чтобы не сбивать ввод). */
-    function syncQtyInputsFromState(root) {
-      const scope = root || document.getElementById('app') || document;
-      if (!scope.querySelectorAll) return;
-      scope.querySelectorAll('[data-action="qty-input"]').forEach((inp) => {
-        const pid = inp.dataset.id;
-        if (pid == null) return;
-        const k = String(pid);
-        const qty = state.cart[pid] || state.cart[k] || 0;
-        const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(qty > 0 ? qty : '');
-        inp.value = displayVal;
-      });
+    function renderQtyNumpad() {
+      const np = state.qtyNumpad;
+      if (!np) return '';
+      const buf = np.buffer != null ? String(np.buffer) : '0';
+      return `
+        <div class="qty-numpad-overlay" data-action="qty-numpad-dismiss">
+          <div class="qty-numpad-panel" onclick="event.stopPropagation()">
+            <div class="qty-numpad-display">${escapeHtml(buf)}</div>
+            <div class="qty-numpad-grid">
+              ${['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => `<button type="button" data-action="qty-numpad-digit" data-digit="${d}">${d}</button>`).join('')}
+            </div>
+            <div class="qty-numpad-grid" style="grid-template-columns:repeat(3,1fr);margin-top:8px;">
+              <button type="button" class="qty-numpad-back" data-action="qty-numpad-clear">C</button>
+              <button type="button" data-action="qty-numpad-digit" data-digit="0">0</button>
+              <button type="button" class="qty-numpad-back" data-action="qty-numpad-back">⌫</button>
+            </div>
+            <div class="qty-numpad-actions">
+              <button type="button" class="qty-numpad-back" data-action="qty-numpad-dismiss">Отмена</button>
+              <button type="button" class="qty-numpad-ok" data-action="qty-numpad-ok">✓</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCartFab() {
+      if (state.isAdmin || !canSalonOrder()) return '';
+      return `
+        <button type="button" class="cart-fab" data-action="tab" data-tab="cart" aria-label="Корзина">
+          ${iconNav.cart}
+          ${cartCount() > 0 ? `<span class="cart-fab-badge">${cartCount()}</span>` : ''}
+        </button>
+      `;
     }
 
     function requestStatusLabel(status, forAdmin) {
@@ -1973,6 +2220,7 @@
 
     function setActiveTab(tab) {
       state.activeTab = tab;
+      state.qtyNumpad = null;
       if (tab === 'admin' && state.isAdmin) {
         loadAdminCatalog();
       }
@@ -2051,15 +2299,9 @@
 
     async function loadAdminRequests(silent = false) {
       if (!state.isAdmin) return;
-      let spinTimer = null;
       if (!silent) {
-        state.adminRequests = [];
+        state.loadingAdminRequests = true;
         render();
-        spinTimer = window.setTimeout(() => {
-          spinTimer = null;
-          state.loadingAdminRequests = true;
-          render();
-        }, 280);
       }
       try {
         const res = await fetch('/api/admin/requests', { headers: initDataHeaders() });
@@ -2067,10 +2309,9 @@
         if (!res.ok || data.ok === false) throw new Error(data.error || String(res.status));
         state.adminRequests = data.requests || [];
       } catch (err) {
-        state.adminRequests = [];
+        if (!silent) state.adminRequests = [];
         if (!silent) showNotice(translateApiError(err.message) || 'Не удалось загрузить заявки');
       } finally {
-        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingAdminRequests = false;
         render();
       }
@@ -2078,15 +2319,9 @@
 
     async function loadAdminCatalog(silent = false) {
       if (!state.isAdmin) return;
-      let spinTimer = null;
       if (!silent) {
-        state.adminFlowers = [];
+        state.loadingAdminCatalog = true;
         render();
-        spinTimer = window.setTimeout(() => {
-          spinTimer = null;
-          state.loadingAdminCatalog = true;
-          render();
-        }, 280);
       }
       try {
         const res = await fetch('/api/admin/catalog', { headers: initDataHeaders() });
@@ -2094,10 +2329,9 @@
         if (!res.ok || data.ok === false) throw new Error(data.error || String(res.status));
         state.adminFlowers = (data.flowers || []).map((f) => ({ ...f }));
       } catch (err) {
-        state.adminFlowers = [];
+        if (!silent) state.adminFlowers = [];
         if (!silent) showNotice(err.message || 'Не удалось загрузить каталог');
       } finally {
-        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingAdminCatalog = false;
         render();
       }
@@ -2471,16 +2705,9 @@
     }
 
     async function loadProducts(silent = false) {
-      let spinTimer = null;
       if (!silent) {
-        state.products = [];
-        state.categories = [{ id: 'all', name: 'Все', count: 0 }];
+        state.loadingProducts = true;
         render();
-        spinTimer = window.setTimeout(() => {
-          spinTimer = null;
-          state.loadingProducts = true;
-          render();
-        }, 300);
       }
       try {
         const data = await apiWakeAware('/api/products');
@@ -2490,7 +2717,6 @@
       } catch (err) {
         state.apiError = err.message || 'Не удалось загрузить каталог';
       } finally {
-        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingProducts = false;
         render();
       }
@@ -2498,15 +2724,9 @@
 
     async function loadRequests(silent = false) {
       if (!state.telegramId) return;
-      let spinTimer = null;
       if (!silent) {
-        state.requests = [];
+        state.loadingRequests = true;
         render();
-        spinTimer = window.setTimeout(() => {
-          spinTimer = null;
-          state.loadingRequests = true;
-          render();
-        }, 300);
       }
       try {
         const data = await apiWakeAware('/api/my-requests', {
@@ -2515,9 +2735,8 @@
         });
         state.requests = data.requests || [];
       } catch (err) {
-        state.requests = [];
+        if (!silent) state.requests = [];
       } finally {
-        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingRequests = false;
         render();
       }
@@ -2555,7 +2774,6 @@
         }
         state.cart[productId] = next;
       }
-      haptic('light');
       render();
     }
 
@@ -2575,7 +2793,6 @@
         }
         state.cart[productId] = next;
       }
-      haptic('light');
       render();
     }
 
@@ -2738,6 +2955,11 @@
         render();
         return;
       }
+      if (state.qtyNumpad) {
+        state.qtyNumpad = null;
+        render();
+        return;
+      }
       if (state.activeTab === 'product') {
         state.activeTab = 'home';
       } else if (state.activeTab === 'checkout') {
@@ -2804,19 +3026,6 @@
     }
 
     function renderHome() {
-      if (state.loadingProducts) {
-        return `
-        <section>
-          <div class="section-head">
-            <h3 class="section-title">Каталог</h3>
-            <button class="soft-btn" type="button" data-action="reload-catalog">Обновить</button>
-          </div>
-          <div class="catalog-loading-screen">
-            <div class="action-overlay-spinner"></div>
-            <span>Загружаем каталог…</span>
-          </div>
-        </section>`;
-      }
       const list = filteredProducts();
       return `
         ${renderCategories()}
@@ -2825,8 +3034,13 @@
             <h3 class="section-title">Каталог</h3>
             <button class="soft-btn" type="button" data-action="reload-catalog">Обновить</button>
           </div>
+          ${state.loadingProducts ? `
+          <div class="catalog-loading-banner">
+            <div class="action-overlay-spinner" style="width:28px;height:28px;margin:0 12px 0 0;border-width:2px;"></div>
+            <span>Обновляем каталог…</span>
+          </div>` : ''}
           <div class="stack">
-            ${!list.length ? `<div class="empty">В каталоге пока нет позиций.</div>` : ''}
+            ${!state.loadingProducts && !list.length ? `<div class="empty">В каталоге пока нет позиций.</div>` : ''}
             ${list.map((item) => renderProductCard(item)).join('')}
           </div>
         </section>
@@ -3004,33 +3218,18 @@
       `;
     }
 
-    function buildRequestCardInner(item, mode) {
-      const isAdmin = mode === 'admin';
+    function buildClientRequestCardInner(item) {
       const st = item.status || '';
       const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
       const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
       const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
       const dWeek = dIso ? weekdayFullRu(dIso) : '';
-      const canDelete = isAdmin && (st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client');
-      const canAct = isAdmin && (item.status === 'new' || item.status === 'change_requested');
 
-      const headlineRight = isAdmin
-        ? `<div class="request-head-right">${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}<span class="request-time">${formatAdminTime(item.created_at)}</span></div>`
-        : `<span class="request-time">${formatAdminTime(item.created_at)}</span>`;
-
-      const statusBlock = isAdmin
-        ? `<div class="request-status-badge-row"><span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span></div>`
-        : (st && st !== 'new' ? `<div class="request-mini-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</div>` : '');
-
-      const salonLine = isAdmin && item.salon_name
-        ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>`
+      const statusBlock = st && st !== 'new'
+        ? `<div class="request-mini-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</div>`
         : '';
 
-      const adminRejectedNote = isAdmin && item.manager_note && st === 'rejected'
-        ? `<div class="request-cancel-note"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>`
-        : '';
-
-      const clientRevision = !isAdmin && item.status === 'change_requested' && (item.previous_items || []).length
+      const clientRevision = item.status === 'change_requested' && (item.previous_items || []).length
         ? `
                 <div class="revision-banner" style="margin-top:12px;">
                   <b>Менеджер внёс изменения.</b> Примите новый состав или отклоните заявку целиком.
@@ -3043,7 +3242,7 @@
               `
         : '';
 
-      const clientCancelNew = !isAdmin && item.status === 'new'
+      const clientCancelNew = item.status === 'new'
         ? `
                 <div class="actions" style="margin-top:14px;">
                   <button class="btn-outline" data-action="cancel-request" data-id="${item.id}">Отменить заявку</button>
@@ -3051,20 +3250,11 @@
               `
         : '';
 
-      const adminFooter = isAdmin && canAct
-        ? `
-            <button class="btn" type="button" data-action="admin-approve-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Подтвердить заявку</button>
-            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:8px;">Редактировать заявку</button>
-            <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить</button>
-          `
-        : '';
-
       return `
               <div class="request-card-headline">
                 <span class="request-id">Заявка #${item.id}</span>
-                ${headlineRight}
+                <span class="request-time">${formatAdminTime(item.created_at)}</span>
               </div>
-              ${salonLine}
               ${statusBlock}
               <div class="request-stat-strip">
                 <div class="request-stat-cell">
@@ -3094,38 +3284,78 @@
                   </div>
                 `).join('')}
               </div>
-              ${!isAdmin && note ? `<div class="request-cancel-note"><b>Комментарий менеджера:</b><br/>${note}</div>` : ''}
-              ${adminRejectedNote}
+              ${note ? `<div class="request-cancel-note"><b>Комментарий менеджера:</b><br/>${note}</div>` : ''}
               ${clientRevision}
               ${clientCancelNew}
+            `;
+    }
+
+    function buildAdminRequestDetailsInner(item) {
+      const st = item.status || '';
+      const dIso = item.delivery_date ? String(item.delivery_date).slice(0, 10) : '';
+      const dHuman = dIso ? formatCheckoutDateShort(dIso) : '';
+      const dWeek = dIso ? weekdayFullRu(dIso) : '';
+      const canAct = item.status === 'new' || item.status === 'change_requested';
+      const adminRejectedNote = item.manager_note && st === 'rejected'
+        ? `<div class="request-cancel-note"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>`
+        : '';
+      const adminFooter = canAct
+        ? `
+            <button class="btn" type="button" data-action="admin-approve-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Подтвердить заявку</button>
+            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:8px;">Редактировать заявку</button>
+            <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить</button>
+          `
+        : '';
+      return `
+              <div class="request-stat-strip">
+                <div class="request-stat-cell">
+                  <span class="request-stat-label">Стеблей</span>
+                  <span class="request-stat-val">${item.total_stems || 0}</span>
+                </div>
+                <div class="request-stat-div" aria-hidden="true"></div>
+                <div class="request-stat-cell">
+                  <span class="request-stat-label">Сумма</span>
+                  <span class="request-stat-val">${money(item.total_amount || 0)}</span>
+                </div>
+              </div>
+              ${dHuman ? `
+              <div class="request-date-banner">
+                <span class="lbl">Желаемая дата</span>
+                <span><b>${escapeHtml(dHuman)}</b>${dWeek ? ` (${escapeHtml(dWeek)})` : ''}</span>
+              </div>` : ''}
+              <div class="request-lines-grid">
+                ${(item.items || []).map((row) => `
+                  <div class="request-line-row">
+                    <img class="request-line-thumb" src="${escapeAttr(productThumbUrl(row.id))}" alt="" loading="lazy" decoding="async" />
+                    <div class="request-line-main">
+                      <div class="request-line-name">${escapeHtml(row.name)}</div>
+                      <div class="request-line-qty">${row.qty} шт</div>
+                    </div>
+                    <div class="request-line-price">${requestLineMoney(row)}</div>
+                  </div>
+                `).join('')}
+              </div>
+              ${adminRejectedNote}
               ${adminFooter}
             `;
     }
 
     function renderRequests() {
-      if (state.loadingRequests) {
-        return `
-        <section class="stack">
-          <div class="section-head">
-            <h2 class="section-title">Мои заявки</h2>
-            <button class="soft-btn" data-action="reload-requests">Обновить</button>
-          </div>
-          <div class="catalog-loading-screen">
-            <div class="action-overlay-spinner"></div>
-            <span>Загружаем заявки…</span>
-          </div>
-        </section>`;
-      }
       return `
         <section class="stack">
           <div class="section-head">
             <h2 class="section-title">Мои заявки</h2>
             <button class="soft-btn" data-action="reload-requests">Обновить</button>
           </div>
-          ${!state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
+          ${state.loadingRequests ? `
+          <div class="catalog-loading-banner">
+            <div class="action-overlay-spinner" style="width:28px;height:28px;margin:0 12px 0 0;border-width:2px;"></div>
+            <span>Обновляем заявки…</span>
+          </div>` : ''}
+          ${!state.loadingRequests && !state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
           ${state.requests.map((item) => `
             <article class="request-card">
-              ${buildRequestCardInner(item, 'client')}
+              ${buildClientRequestCardInner(item)}
             </article>
           `).join('')}
         </section>
@@ -3217,9 +3447,18 @@
     }
 
     function formatAdminDayLabel(dayKey) {
-      if (!dayKey || dayKey === 'unknown') return 'Без даты';
+      if (!dayKey || dayKey === 'unknown') return 'Без даты поставки';
       const d = new Date(`${dayKey}T12:00:00.000Z`);
       return d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function formatAdminShortDate(iso) {
+      if (!iso) return '—';
+      try {
+        return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      } catch (_) {
+        return '—';
+      }
     }
 
     function formatAdminTime(iso) {
@@ -3247,9 +3486,11 @@
       const byDate = new Map();
       for (const r of list) {
         let dayKey = 'unknown';
-        if (r.created_at) {
+        const raw = r.delivery_date;
+        if (raw) {
           try {
-            dayKey = new Date(r.created_at).toISOString().slice(0, 10);
+            dayKey = String(raw).slice(0, 10);
+            if (dayKey.length < 10) dayKey = 'unknown';
           } catch (_) {}
         }
         if (!byDate.has(dayKey)) byDate.set(dayKey, []);
@@ -3258,7 +3499,7 @@
       const dates = [...byDate.keys()].sort((a, b) => {
         if (a === 'unknown') return 1;
         if (b === 'unknown') return -1;
-        return b.localeCompare(a);
+        return a.localeCompare(b);
       });
       return dates.map((dayKey) => {
         const rows = byDate.get(dayKey);
@@ -3284,9 +3525,30 @@
       const st = item.status || '';
       const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
       const pulse = state.adminHighlightId === item.id ? ' request-card--pulse' : '';
+      const expanded = !!state.adminExpandedRequestIds[item.id];
+      const canDelete = st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client';
+      const datePart = formatAdminShortDate(item.created_at);
+      const timePart = formatAdminTime(item.created_at);
       return `
         <article class="request-card admin-request-card status-${stCls}${pulse}">
-          ${buildRequestCardInner(item, 'admin')}
+          <div class="admin-req-card-top">
+            <button type="button" class="admin-req-summary-btn" data-action="admin-toggle-req" data-id="${item.id}">
+              <div class="request-card-headline">
+                <span class="request-id">Заявка #${item.id}</span>
+                <div class="request-head-meta-col">
+                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
+                  <span class="request-datetime-line">${escapeHtml(datePart)} · ${escapeHtml(timePart)}</span>
+                </div>
+                <span class="admin-req-chevron ${expanded ? 'admin-req-chevron--open' : ''}" aria-hidden="true">▼</span>
+              </div>
+              ${item.salon_name ? `<div class="request-salon-line muted">${escapeHtml(item.salon_name)}</div>` : ''}
+              <div class="admin-req-tiny-preview muted">${item.total_stems || 0} стеблей · ${money(item.total_amount || 0)}</div>
+            </button>
+            ${canDelete ? `<button type="button" class="admin-req-delete" data-action="admin-delete-req" data-id="${item.id}" aria-label="Удалить заявку из списка">${trashIconSvg}</button>` : ''}
+          </div>
+          <div class="admin-req-details"${expanded ? '' : ' hidden'}>
+            ${buildAdminRequestDetailsInner(item)}
+          </div>
         </article>
       `;
     }
@@ -3335,14 +3597,19 @@
             <h2 class="section-title">Заявки клиентов</h2>
             <button class="soft-btn" type="button" data-action="admin-reload-requests">Обновить</button>
           </div>
-          ${state.loadingAdminRequests ? `
+          ${state.loadingAdminRequests && !state.adminRequests.length ? `
             <div class="catalog-loading-screen">
               <div class="action-overlay-spinner"></div>
               <span>Загружаем заявки…</span>
             </div>
           ` : ''}
           ${!state.loadingAdminRequests && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
-          ${!state.loadingAdminRequests && state.adminRequests.length ? `
+          ${state.adminRequests.length ? `
+            ${state.loadingAdminRequests ? `
+            <div class="catalog-loading-banner">
+              <div class="action-overlay-spinner" style="width:28px;height:28px;margin:0 12px 0 0;border-width:2px;"></div>
+              <span>Обновляем заявки…</span>
+            </div>` : ''}
             <div class="admin-toolbar">
               <label for="admin-salon-filter">Салон</label>
               <select id="admin-salon-filter" data-action="admin-filter-salon" class="admin-filter-select" aria-label="Фильтр по салону">
@@ -3352,7 +3619,7 @@
                   return `<option value="${enc}" ${state.adminSalonFilter === s ? 'selected' : ''}>${escapeHtml(s)}</option>`;
                 }).join('')}
               </select>
-              <p class="admin-stats-line">Показано: <b>${filtered.length}</b> из ${state.adminRequests.length} · сгруппировано по дате и салону</p>
+              <p class="admin-stats-line">Показано: <b>${filtered.length}</b> из ${state.adminRequests.length} · по дате поставки и салону</p>
             </div>
             ${!filtered.length ? `<div class="empty">Нет заявок для выбранного салона.</div>` : ''}
             ${board.map((day) => `
@@ -3471,7 +3738,6 @@
     }
 
     function renderNav() {
-      const count = cartCount();
       const tabs = state.isAdmin
         ? [
             ['home', iconNav.home, 'Каталог'],
@@ -3481,11 +3747,10 @@
           ]
         : [
             ['home', iconNav.home, 'Каталог'],
-            ['cart', iconNav.cart, 'Корзина'],
             ['orders', iconNav.orders, 'Заявки'],
             ['profile', iconNav.person, 'Профиль'],
           ];
-      const gridClass = 'nav-grid cols-4';
+      const gridClass = state.isAdmin ? 'nav-grid cols-4' : 'nav-grid cols-3';
       return `
         <nav class="bottom-nav">
           <div class="${gridClass}">
@@ -3493,7 +3758,6 @@
               <button class="nav-btn ${state.activeTab === tab ? 'active' : ''}" data-action="tab" data-tab="${tab}" type="button">
                 <span class="nav-icon">${iconHtml}</span>
                 <span>${label}</span>
-                ${tab === 'cart' && count > 0 ? `<span class="nav-badge">${count}</span>` : ''}
               </button>
             `).join('')}
           </div>
@@ -3512,17 +3776,6 @@
         }, 2500);
       }
       const app = document.getElementById('app');
-      const ae = document.activeElement;
-      let qtyFocusId = null;
-      let qtySelStart = null;
-      let qtySelEnd = null;
-      if (ae && ae.getAttribute && ae.getAttribute('data-action') === 'qty-input' && ae.dataset && ae.dataset.id != null) {
-        qtyFocusId = String(ae.dataset.id);
-        try {
-          qtySelStart = ae.selectionStart;
-          qtySelEnd = ae.selectionEnd;
-        } catch (_) {}
-      }
       const screen = state.activeTab === 'admin' ? renderAdmin()
         : state.activeTab === 'home' ? renderHome()
         : state.activeTab === 'product' ? renderProduct()
@@ -3539,27 +3792,13 @@
             ${screen}
           </main>
           ${renderNav()}
+          ${renderCartFab()}
           ${state.notice ? `<div class="toast">${escapeHtml(state.notice)}</div>` : ''}
         </div>
         ${renderAdminEditorModal()}
         ${renderRejectModal()}
+        ${renderQtyNumpad()}
       `;
-
-      syncQtyInputsFromState(app);
-
-      if (qtyFocusId != null) {
-        const inp = app.querySelector('[data-action="qty-input"][data-id="' + qtyFocusId + '"]');
-        if (inp && typeof inp.focus === 'function') {
-          const k = String(qtyFocusId);
-          const qty = state.cart[qtyFocusId] || state.cart[k] || 0;
-          const displayVal = state.qtyDraft[k] !== undefined ? state.qtyDraft[k] : String(qty > 0 ? qty : '');
-          inp.value = displayVal;
-          inp.focus();
-          if (qtySelStart != null && typeof inp.setSelectionRange === 'function') {
-            try { inp.setSelectionRange(qtySelStart, qtySelEnd); } catch (_) {}
-          }
-        }
-      }
 
       updateTelegramButtons();
       syncGlobalOverlay();
@@ -3586,12 +3825,6 @@
     });
     document.addEventListener('input', (event) => {
       const t = event.target;
-      if (t && t.matches && t.matches('[data-action="qty-input"]')) {
-        event.stopPropagation();
-        const pid = t.dataset.id;
-        if (pid != null) state.qtyDraft[String(pid)] = t.value;
-        return;
-      }
       if (t && t.matches && t.matches('[data-admin-flower-price]')) {
         const fid = Number(t.dataset.id);
         const f = state.adminFlowers.find((x) => x.id === fid);
@@ -3634,11 +3867,60 @@
         const product = state.products.find((item) => String(item.id) === String(id));
         if (product) addToCart(product);
       }
-      if (action === 'qty-minus') {
-        changeQty(id, -5);
+      if (action === 'qty-delta') {
+        const d = Number(target.dataset.delta);
+        if (Number.isFinite(d)) changeQty(id, d);
       }
-      if (action === 'qty-plus') {
-        changeQty(id, 5);
+      if (action === 'qty-open-numpad') {
+        const pid = id != null ? Number(id) : NaN;
+        if (!Number.isFinite(pid)) return;
+        const k = String(pid);
+        const qty = state.cart[pid] || state.cart[k] || 0;
+        let buf = qty > 0 ? String(qty) : '0';
+        if (state.qtyDraft[k] !== undefined) {
+          const raw = String(state.qtyDraft[k]).replace(/\D/g, '');
+          buf = raw || '0';
+        }
+        state.qtyNumpad = { productId: pid, buffer: buf };
+        render();
+      }
+      if (action === 'qty-numpad-digit') {
+        const dig = target.dataset.digit;
+        if (dig == null || !state.qtyNumpad) return;
+        let b = String(state.qtyNumpad.buffer || '').replace(/\D/g, '');
+        if (b === '' || b === '0') b = dig;
+        else b = b + dig;
+        if (b.length > 1) b = b.replace(/^0+/, '') || '0';
+        if (b.length > 5) b = b.slice(0, 5);
+        state.qtyNumpad.buffer = b;
+        render();
+      }
+      if (action === 'qty-numpad-back') {
+        if (!state.qtyNumpad) return;
+        let b = String(state.qtyNumpad.buffer || '0');
+        state.qtyNumpad.buffer = b.length > 1 ? b.slice(0, -1) : '0';
+        render();
+      }
+      if (action === 'qty-numpad-clear') {
+        if (state.qtyNumpad) state.qtyNumpad.buffer = '0';
+        render();
+      }
+      if (action === 'qty-numpad-dismiss') {
+        state.qtyNumpad = null;
+        render();
+      }
+      if (action === 'qty-numpad-ok') {
+        const np = state.qtyNumpad;
+        state.qtyNumpad = null;
+        if (!np) return;
+        delete state.qtyDraft[String(np.productId)];
+        setQtyFromInput(np.productId, np.buffer || '0');
+      }
+      if (action === 'admin-toggle-req') {
+        const rid = Number(id);
+        if (!Number.isFinite(rid)) return;
+        state.adminExpandedRequestIds[rid] = !state.adminExpandedRequestIds[rid];
+        render();
       }
       if (action === 'remove') {
         changeQty(id, -999999);
@@ -3720,36 +4002,6 @@
         .replace(/'/g, '&#039;');
     }
     function escapeAttr(value) { return escapeHtml(value); }
-
-    let qtyInputBlurTimer = null;
-    document.addEventListener(
-      'pointerdown',
-      (event) => {
-        const el = event.target && event.target.closest ? event.target.closest('[data-action]') : null;
-        if (!el) return;
-        const a = el.dataset.action;
-        if (a === 'qty-minus' || a === 'qty-plus' || a === 'remove') {
-          window.clearTimeout(qtyInputBlurTimer);
-        }
-      },
-      true,
-    );
-    document.addEventListener(
-      'focusout',
-      (event) => {
-        const t = event.target;
-        if (!t || !t.getAttribute || t.getAttribute('data-action') !== 'qty-input') return;
-        const pid = t.dataset.id;
-        if (pid == null) return;
-        const val = t.value;
-        window.clearTimeout(qtyInputBlurTimer);
-        qtyInputBlurTimer = window.setTimeout(() => {
-          qtyInputBlurTimer = null;
-          setQtyFromInput(pid, val);
-        }, 160);
-      },
-      true,
-    );
 
     async function init() {
       render();
