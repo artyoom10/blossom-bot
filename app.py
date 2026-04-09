@@ -508,6 +508,26 @@ def totals_from_items(items: List[Dict[str, Any]]) -> Tuple[float, int]:
     return round(total_amount, 2), total_stems
 
 
+def patch_restore_previous_snapshot(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Восстановить состав и дату из снимка previous_* после отклонения правок менеджера."""
+    prev = row.get("previous_items")
+    if not prev or not isinstance(prev, list):
+        return {}
+    total_amount, total_stems = totals_from_items(prev)
+    out: Dict[str, Any] = {
+        "items": prev,
+        "previous_items": None,
+        "manager_note": None,
+        "total_amount": total_amount,
+        "total_stems": total_stems,
+    }
+    pd_prev = row.get("previous_delivery_date")
+    if pd_prev:
+        out["delivery_date"] = str(pd_prev)[:10]
+        out["previous_delivery_date"] = None
+    return out
+
+
 def build_items_summary_plain(items: List[Dict[str, Any]]) -> str:
     lines = []
     for item in items:
@@ -1346,9 +1366,14 @@ def api_cancel_request():
             return jsonify({"ok": False, "error": "request_cannot_be_cancelled"}), 400
 
         new_status = "rejected_by_client" if row.get("status") == "change_requested" else "cancelled_by_client"
+        patch_body: Dict[str, Any] = {"status": new_status, "updated_at": now_iso()}
+        if row.get("status") == "change_requested":
+            restored = patch_restore_previous_snapshot(row)
+            if restored:
+                patch_body.update(restored)
         upd = supabase_patch(
             REQUESTS_TABLE,
-            {"status": new_status, "updated_at": now_iso()},
+            patch_body,
             params={"id": f"eq.{request_id}"},
             prefer_return=True,
         )
@@ -1454,23 +1479,10 @@ def _revision_response_apply(request_id: int, telegram_id: str, decision: str) -
                 "updated_at": now_iso(),
             }
         else:
-            prev = row.get("previous_items") or []
-            if not prev:
+            rest = patch_restore_previous_snapshot(row)
+            if not rest:
                 return None, "no_previous_items"
-            total_amount, total_stems = totals_from_items(prev)
-            patch_body = {
-                "items": prev,
-                "previous_items": None,
-                "manager_note": None,
-                "status": "new",
-                "total_amount": total_amount,
-                "total_stems": total_stems,
-                "updated_at": now_iso(),
-            }
-            pd_prev = row.get("previous_delivery_date")
-            if pd_prev:
-                patch_body["delivery_date"] = str(pd_prev)[:10]
-                patch_body["previous_delivery_date"] = None
+            patch_body = {**rest, "status": "rejected_by_client", "updated_at": now_iso()}
 
         upd = supabase_patch(
             REQUESTS_TABLE,
@@ -1501,14 +1513,10 @@ def _revision_response_apply(request_id: int, telegram_id: str, decision: str) -
             if ADMIN_CHAT_ID:
                 tg_send_message(
                     ADMIN_CHAT_ID,
-                    f"↩️ Клиент <b>отклонил</b> правки по заявке #{request_id}. Восстановлен прежний состав.\n"
+                    f"❌ Клиент <b>отклонил</b> правки по заявке #{request_id}. Заявка отменена.\n"
                     f"Салон: <b>{salon_label}</b>",
                 )
-            tg_send_message(
-                telegram_id,
-                "↩️ <b>Изменения отклонены.</b>\n"
-                f"Заявка <b>#{html.escape(str(request_id))}</b> снова на рассмотрении в прежнем виде.",
-            )
+            notify_client(updated, "rejected_by_client")
 
         return updated, None
     except Exception:

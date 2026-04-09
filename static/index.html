@@ -329,6 +329,27 @@
       text-align: right;
       margin-top: 0;
     }
+    .product-meta-row--unit {
+      justify-content: flex-start;
+    }
+    .product-cart-price-rail,
+    .cart-price-rail {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-start;
+      gap: 2px;
+      flex-shrink: 0;
+      min-width: 0;
+      text-align: right;
+    }
+    .cart-line-total {
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
     .actions {
       display: flex;
       gap: 10px;
@@ -388,13 +409,17 @@
       color: var(--text);
     }
     .qty-stepper .icon-btn.qty-step {
-      width: auto;
-      min-width: 36px;
-      height: 40px;
-      padding: 0 6px;
+      width: 38px;
+      min-width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 50%;
       font-size: 11px;
       font-weight: 800;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
+      border: 1px solid rgba(15, 23, 42, 0.14);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
     }
 
     .product-hero-frame {
@@ -464,7 +489,7 @@
     .cart-row {
       display: flex;
       gap: 12px;
-      align-items: stretch;
+      align-items: flex-start;
     }
     .cart-trash-rail {
       flex-shrink: 0;
@@ -1071,14 +1096,12 @@
       0%, 100% { opacity: 0.2; transform: translateY(0); }
       50% { opacity: 1; transform: translateY(-1px); }
     }
-    svg.admin-gold-check {
-      display: inline-block;
-      vertical-align: middle;
-      margin-left: 8px;
-      width: 24px;
-      height: 24px;
-      line-height: 0;
-      filter: drop-shadow(0 0 8px rgba(255, 210, 90, 0.95)) drop-shadow(0 0 2px rgba(200, 150, 40, 0.9));
+    .admin-glow-word {
+      font-weight: 800;
+      color: #c9a227;
+      text-shadow:
+        0 0 10px rgba(212, 175, 55, 0.55),
+        0 0 22px rgba(245, 220, 120, 0.42);
     }
     .boot-dots {
       display: flex;
@@ -1494,11 +1517,16 @@
       margin-top: 8px;
     }
     .cart-item .qty-stepper--cart .icon-btn.qty-step {
-      min-width: 28px;
-      height: 38px;
-      padding: 0 4px;
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 50%;
       font-size: 11px;
       font-weight: 800;
+      border: 1px solid rgba(15, 23, 42, 0.14);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
     }
     .cart-item .qty-stepper--cart .qty-remove {
       width: 42px;
@@ -2238,31 +2266,35 @@
         box-shadow: 0 0 0 14px rgba(45, 157, 120, 0);
       }
     }
+    .stock-avail-num {
+      font-size: 15px;
+      font-weight: 800;
+    }
     .stock-lock-wrap {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 2px;
+      gap: 4px;
       margin-left: 6px;
-      padding: 0 5px;
-      min-height: 20px;
+      padding: 2px 9px;
+      min-height: 26px;
       border-radius: 999px;
       background: #eceff2;
       color: #6c7380;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 15px;
+      font-weight: 800;
       vertical-align: middle;
-      line-height: 1;
+      line-height: 1.15;
     }
     .stock-lock-wrap > span:last-child {
-      min-width: 0.6em;
+      min-width: 0.65em;
       text-align: center;
       font-variant-numeric: tabular-nums;
     }
     .stock-lock-icon {
-      width: 11px;
-      height: 11px;
-      opacity: .85;
+      width: 16px;
+      height: 16px;
+      opacity: .9;
       flex-shrink: 0;
     }
     .action-overlay-error-icon {
@@ -2409,8 +2441,6 @@
         return '';
       }
     }
-
-    const goldCheckSvg = '<svg class="admin-gold-check" viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#fdf6d3" stroke="#d4a017" stroke-width="1.2"/><path fill="none" stroke="#1f7a5b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7 12.5l3 3 7-7"/></svg>';
 
     const iconNav = {
       home: '<svg class="nav-icon-svg" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
@@ -2783,6 +2813,7 @@
 
     async function api(path, options = {}) {
       const res = await fetch(path, {
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
         ...options,
       });
@@ -2801,7 +2832,7 @@
         render();
       }
       try {
-        const res = await fetch('/api/admin/requests', { headers: initDataHeaders() });
+        const res = await fetch('/api/admin/requests', { cache: 'no-store', headers: initDataHeaders() });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || String(res.status));
         state.adminRequests = data.requests || [];
@@ -3207,7 +3238,7 @@
       state.actionOverlay = {
         phase: 'loading',
         variant: 'revision',
-        loadingText: decision === 'accept' ? 'Принимаем изменения…' : 'Возвращаем заявку…',
+        loadingText: decision === 'accept' ? 'Принимаем изменения…' : 'Отменяем заявку…',
       };
       render();
       try {
@@ -3237,14 +3268,14 @@
           state.actionOverlay = {
             phase: 'success',
             variant: 'revision-reject',
-            title: 'Изменения отклонены',
-            sub: 'Заявка снова на рассмотрении',
+            title: 'Заявка отменена',
+            sub: 'Правки менеджера отклонены',
           };
         }
         render();
         await sleep(2000);
         state.actionOverlay = null;
-        showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Восстановлен прежний состав заявки');
+        showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Заявка отменена');
       } catch (err) {
         state.actionOverlay = null;
         showNotice(err.message || 'Не удалось выполнить действие');
@@ -3260,6 +3291,21 @@
     }
 
     /** Повторы при «засыпании» Render и сетевых сбоях */
+    function normalizeClientRequestRow(r) {
+      if (!r || typeof r !== 'object') return r;
+      ['items', 'previous_items'].forEach((k) => {
+        const v = r[k];
+        if (typeof v === 'string') {
+          try {
+            r[k] = JSON.parse(v);
+          } catch {
+            r[k] = k === 'items' ? [] : null;
+          }
+        }
+      });
+      return r;
+    }
+
     async function apiWakeAware(path, options = {}) {
       const maxAttempts = 14;
       let lastErr = new Error('Сеть недоступна');
@@ -3267,6 +3313,7 @@
         let res = null;
         try {
           res = await fetch(path, {
+            cache: 'no-store',
             headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
             ...options,
           });
@@ -3357,7 +3404,7 @@
           method: 'POST',
           body: JSON.stringify({ telegram_id: tgIdForApi() }),
         });
-        state.requests = data.requests || [];
+        state.requests = (data.requests || []).map(normalizeClientRequestRow);
       } catch (err) {
         if (!silent) state.requests = [];
       } finally {
@@ -3583,7 +3630,7 @@
               ${logo}
               <div class="header-brand-text">
                 <div class="eyebrow">${sub}</div>
-                <h1 class="title">Личный кабинет Админа ${goldCheckSvg}</h1>
+                <h1 class="title">Личный кабинет <span class="admin-glow-word">Админа</span></h1>
               </div>
             </div>
             ${salonCorner}
@@ -3660,6 +3707,12 @@
     function renderProductCard(item) {
       const inCart = productInCart(item.id);
       const lineTot = inCart ? money(productLineTotalRub(item)) : '';
+      const rightCol = inCart
+        ? `<div class="product-cart-price-rail">
+            <span class="product-line-total">${lineTot}</span>
+            ${renderTrashBare(item.id)}
+          </div>`
+        : `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>`;
       const mainBlock = `
             <img class="thumb" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" data-action="open-product" data-id="${item.id}" />
             <div class="product-main">
@@ -3668,18 +3721,15 @@
                   <h4 class="product-name">${escapeHtml(item.name)}</h4>
                   <div class="muted">${productStockLine(item)}</div>
                 </div>
-                ${!inCart ? `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>` : ''}
+                ${rightCol}
               </div>
-              <div class="product-meta-row">
+              <div class="product-meta-row ${inCart ? 'product-meta-row--unit' : ''}">
                 <span class="product-price">${escapeHtml(item.price_label)}</span>
-                ${inCart ? `<span class="product-line-total">${lineTot}</span>` : ''}
               </div>
             </div>`;
       return `
         <article class="product-card ${item.available ? '' : 'out'}">
-          ${inCart
-        ? `<div class="product-card-head"><div class="product-row">${mainBlock}</div><div class="product-trash-rail">${renderTrashBare(item.id)}</div></div>`
-        : `<div class="product-row">${mainBlock}</div>`}
+          ${inCart ? `<div class="product-card-head"><div class="product-row">${mainBlock}</div></div>` : `<div class="product-row">${mainBlock}</div>`}
           <div class="product-card-qty-bottom">
             ${inCart
               ? renderQtyStepper(item, 'card')
@@ -3716,10 +3766,12 @@
                   <div class="muted" style="margin-top:8px;">${productStockLine(item)}</div>
                 </div>
                 ${inCartUi
-        ? `<div class="product-line-total" style="font-size:18px;">${money(productLineTotalRub(item))}</div>`
+        ? `<div class="product-cart-price-rail">
+            <span class="product-line-total" style="font-size:18px;">${money(productLineTotalRub(item))}</span>
+            ${renderTrashBare(item.id)}
+          </div>`
         : `<span class="pill ${item.available ? '' : 'out'}">${escapeHtml(item.status)}</span>`}
               </div>
-              ${inCartUi ? `<div class="product-trash-rail">${renderTrashBare(item.id)}</div>` : ''}
             </div>
             <div class="detail-grid">
               <div class="detail-card">
@@ -3770,15 +3822,13 @@
                   <div class="cart-row">
                     <img class="cart-thumb" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" data-action="open-product" data-id="${item.id}" />
                     <div class="cart-item-body">
-                      <div class="product-top">
-                        <div>
-                          <h3 class="product-name">${escapeHtml(item.name)}</h3>
-                          <div class="muted">${escapeHtml(item.price_label)}</div>
-                        </div>
-                        <div style="font-weight:700;">${money(item.total)}</div>
-                      </div>
+                      <h3 class="product-name">${escapeHtml(item.name)}</h3>
+                      <div class="muted">${escapeHtml(item.price_label)}</div>
                     </div>
-                    <div class="cart-trash-rail">${renderTrashBare(item.id)}</div>
+                    <div class="cart-price-rail">
+                      <div class="cart-line-total">${money(item.total)}</div>
+                      ${renderTrashBare(item.id)}
+                    </div>
                   </div>
                   <div class="cart-qty-wrap cart-qty-bottom">
                     ${renderQtyStepper(item, 'cart')}
@@ -4020,7 +4070,7 @@
               <div class="profile-top">
                 <div class="profile-avatar" style="background:var(--primary-soft);color:var(--primary);">${iconNav.admin}</div>
                 <div>
-                  <div class="product-name">Администратор ${goldCheckSvg}</div>
+                  <div class="product-name">Администратор</div>
                   <div class="muted">Blossom Flower Farm · режим администратора</div>
                 </div>
               </div>
@@ -4040,7 +4090,7 @@
           <div class="admin-profile-strip">
             <span class="admin-profile-strip__icon" aria-hidden="true">${iconNav.admin}</span>
             <div>
-              <p class="admin-profile-strip__title">Администратор ${goldCheckSvg}</p>
+              <p class="admin-profile-strip__title">Администратор</p>
             </div>
           </div>` : ''}
           <div class="profile-card">
@@ -4457,7 +4507,7 @@
         const tabs = [
           ['home', iconNav.home, 'Каталог'],
           ['orders', iconNav.orders, 'Заявки'],
-          ['profile', iconNav.person, 'Администратор'],
+          ['profile', iconNav.person, 'Профиль'],
           ['admin', iconNav.admin, 'Админ'],
         ];
         return `
