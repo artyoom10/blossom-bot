@@ -51,10 +51,18 @@
       backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(228,232,237,.75);
     }
+    .header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
     .header-brand {
       display: flex;
       align-items: flex-start;
       gap: 12px;
+      min-width: 0;
+      flex: 1;
     }
     .header-brand-text {
       min-width: 0;
@@ -63,11 +71,21 @@
     .header-logo {
       width: 42px;
       height: 42px;
-      object-fit: contain;
+      object-fit: cover;
       flex-shrink: 0;
-      border-radius: 11px;
+      border-radius: 50%;
       background: var(--surface);
       border: 1px solid rgba(228,232,237,.9);
+      box-shadow: 0 2px 8px rgba(18,24,32,.06);
+    }
+    .header-salon-logo {
+      width: 44px;
+      height: 44px;
+      object-fit: cover;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      background: var(--surface);
       box-shadow: 0 2px 8px rgba(18,24,32,.06);
     }
     .eyebrow {
@@ -350,9 +368,6 @@
     .warning { background: var(--danger-soft); color: var(--danger); border: 1px solid #ffd8d5; }
     .success { background: var(--primary-soft); color: var(--primary); border: 1px solid #bbe5cf; }
 
-    .request-card {
-      padding: 16px;
-    }
     .request-head {
       display: flex;
       justify-content: space-between;
@@ -366,13 +381,68 @@
       padding: 6px 10px;
       font-size: 11px;
       font-weight: 700;
-      white-space: nowrap;
+      line-height: 1.25;
+      max-width: 100%;
+      text-align: center;
+      white-space: normal;
+      word-break: break-word;
     }
     .request-status.new { background: #edf7f2; color: var(--primary); }
     .request-status.change_requested { background: #fff4e5; color: #b54708; }
     .request-status.approved { background: #eaf6ee; color: #137333; }
-    .request-status.rejected, .request-status.cancelled_by_client { background: #fff1f1; color: var(--danger); }
+    .request-status.rejected, .request-status.cancelled_by_client, .request-status.rejected_by_client { background: #fff1f1; color: var(--danger); }
 
+    .request-card {
+      padding: 16px 16px 18px;
+    }
+    .request-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .request-card-top-left { min-width: 0; flex: 1; }
+    .request-card-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      max-width: 52%;
+    }
+    .request-stems-hero {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--primary);
+      margin-top: 12px;
+      line-height: 1.1;
+    }
+    .request-stems-hero span { font-size: 14px; font-weight: 700; color: var(--muted); margin-left: 4px; }
+    .request-sum-line {
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .request-delivery-line {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .request-items-list {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .request-cancel-note {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: var(--surface-soft);
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text);
+    }
     .profile-card {
       padding: 16px;
     }
@@ -384,14 +454,65 @@
     .profile-avatar {
       width: 56px;
       height: 56px;
-      border-radius: 18px;
+      border-radius: 50%;
       background: #ede9fe;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       font-size: 22px;
       color: var(--text);
+      overflow: hidden;
+      flex-shrink: 0;
     }
+    .profile-avatar img.profile-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .profile-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #3b82f6;
+      color: white;
+      flex-shrink: 0;
+    }
+    .verified-badge svg {
+      width: 11px;
+      height: 11px;
+      display: block;
+    }
+    .profile-stats-panel {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--primary-soft) 0%, #f0f9f5 100%);
+      border: 1px solid rgba(31, 122, 91, .15);
+    }
+    .profile-stats-panel h4 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .profile-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .profile-stat-val { font-size: 22px; font-weight: 800; color: var(--text); }
+    .profile-stat-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
     .profile-avatar .nav-icon-svg {
       width: 28px;
       height: 28px;
@@ -424,6 +545,9 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 8px;
+    }
+    .nav-grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
     .nav-grid.cols-5 {
       grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -519,11 +643,15 @@
       align-items: center;
       justify-content: center;
       animation: boot-float 2.4s ease-in-out infinite;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid rgba(228,232,237,.9);
     }
     .boot-splash__logo {
       width: 96px;
       height: 96px;
-      object-fit: contain;
+      object-fit: cover;
       display: block;
       filter: drop-shadow(0 6px 16px rgba(31, 122, 91, .18));
     }
@@ -750,12 +878,21 @@
     .admin-req-card.status-change_requested { border-left-color: #d97706; }
     .admin-req-card.status-approved { border-left-color: #15803d; }
     .admin-req-card.status-rejected,
+    .admin-req-card.status-rejected_by_client,
     .admin-req-card.status-cancelled_by_client { border-left-color: #9ca3af; }
     .admin-req-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 10px;
+    }
+    .admin-req-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      min-width: 0;
+      max-width: 55%;
     }
     .admin-req-time {
       font-size: 12px;
@@ -1031,7 +1168,9 @@
       telegramName: [tgUser?.first_name, tgUser?.last_name].filter(Boolean).join(' ') || 'Гость',
       telegramUsername: tgUser?.username || '',
       isAdmin: false,
-      adminSubTab: 'requests',
+      stats: { approved_rub: 0, approved_stems: 0 },
+      deliveryDate: '',
+      rejectModal: null,
       adminRequests: [],
       adminFlowers: [],
       loadingAdmin: false,
@@ -1133,16 +1272,64 @@
       `;
     }
 
-    function requestStatusLabel(status) {
+    function requestStatusLabel(status, forAdmin) {
+      if (forAdmin) {
+        const amap = {
+          new: 'Новая',
+          approved: 'Подтверждена',
+          rejected: 'Отмена админом',
+          rejected_by_client: 'Отклонена клиентом',
+          change_requested: 'Нужно изменить',
+          cancelled_by_client: 'Отмена клиентом',
+        };
+        return amap[status] || status;
+      }
       const map = {
         new: 'Новая',
         approved: 'Подтверждена',
         rejected: 'Отклонена',
+        rejected_by_client: 'Отклонена',
         change_requested: 'Нужно изменить',
         cancelled_by_client: 'Отменена вами',
       };
       return map[status] || status;
     }
+
+    function formatRequestDate(iso) {
+      if (!iso) return '';
+      try {
+        const s = String(iso).slice(0, 10);
+        const d = new Date(s.length === 10 ? `${s}T12:00:00` : iso);
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch (_) {
+        return '';
+      }
+    }
+
+    function salonLogoUrl(salonId) {
+      if (salonId == null || salonId === '') return '';
+      return `/miniapp/salon_${salonId}.png`;
+    }
+
+    function headerSalonLogoHtml() {
+      const sid = state.salon && state.salon.id;
+      if (!sid) return '';
+      const src = salonLogoUrl(sid);
+      return `<img class="header-salon-logo" src="${escapeAttr(src)}" alt="" width="44" height="44" loading="lazy" decoding="async" onerror="this.style.visibility='hidden'" />`;
+    }
+
+    function profileSalonAvatarInner() {
+      if (state.isAdmin) {
+        return `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--primary);background:var(--primary-soft);">${iconNav.admin}</span>`;
+      }
+      const sid = state.salon && state.salon.id;
+      if (sid) {
+        return `<img class="profile-avatar-img" src="${escapeAttr(salonLogoUrl(sid))}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('🏬'))" />`;
+      }
+      return '🏬';
+    }
+
+    const verifiedSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
 
     function categoryId(name) {
       return name === 'Все' ? 'all' : name;
@@ -1151,8 +1338,10 @@
     function setActiveTab(tab) {
       state.activeTab = tab;
       if (tab === 'admin' && state.isAdmin) {
+        loadAdminCatalog();
+      }
+      if (tab === 'orders' && state.isAdmin) {
         loadAdminRequests();
-        if (state.adminSubTab === 'catalog') loadAdminCatalog();
       }
       render();
     }
@@ -1248,13 +1437,13 @@
       const rows = state.adminFlowers.map((f) => {
         const pr = f.price_rub;
         const numPrice = pr === '' || pr == null ? null : Number(pr);
-        const st = f.stock_display_override;
+        const st = f.stems_count;
         const numStock = st === '' || st == null ? null : Number(st);
         return {
           id: f.id,
           catalog_visible: !!f.catalog_visible,
           price_rub: numPrice != null && !Number.isNaN(numPrice) ? numPrice : null,
-          stock_display_override: numStock != null && !Number.isNaN(numStock) ? numStock : null,
+          stems_count: numStock != null && !Number.isNaN(numStock) ? numStock : null,
         };
       });
       const res = await fetch('/api/admin/catalog', {
@@ -1274,6 +1463,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || String(res.status));
         const req = data.request;
+        const dRaw = req.delivery_date ? String(req.delivery_date).slice(0, 10) : '';
         state.adminEditor = {
           id: req.id,
           items: (req.items || []).map((i) => ({
@@ -1283,8 +1473,9 @@
             price: i.price,
           })),
           comment: '',
+          deliveryDate: dRaw,
         };
-        state.activeTab = 'admin';
+        state.activeTab = 'orders';
         render();
       } catch (err) {
         showNotice(err.message || 'Не удалось открыть заявку');
@@ -1305,6 +1496,8 @@
         .filter((i) => i.qty > 0);
       const ta = document.querySelector('[data-admin-revise-comment]');
       const comment = (ta && ta.value ? ta.value : '').trim();
+      const dEl = document.querySelector('[data-admin-revise-delivery]');
+      const deliveryDate = (dEl && dEl.value ? dEl.value : ed.deliveryDate || '').trim().slice(0, 10);
       if (!items.length) {
         showNotice('Нужна хотя бы одна позиция с количеством');
         return;
@@ -1317,7 +1510,7 @@
         const res = await fetch(`/api/admin/request/${ed.id}/revise`, {
           method: 'POST',
           headers: initDataHeaders(),
-          body: JSON.stringify({ items, comment }),
+          body: JSON.stringify({ items, comment, delivery_date: deliveryDate || undefined }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
@@ -1331,6 +1524,49 @@
       render();
     }
 
+    async function submitAdminReject(requestId) {
+      const ta = document.querySelector('[data-reject-comment]');
+      const comment = (ta && ta.value ? ta.value : '').trim();
+      if (comment.length < 2) {
+        showNotice('Укажите комментарий для клиента');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/admin/request/${requestId}/reject`, {
+          method: 'POST',
+          headers: initDataHeaders(),
+          body: JSON.stringify({ comment }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
+        state.rejectModal = null;
+        await loadAdminRequests();
+        showNotice('Заявка отменена, клиент уведомлён');
+      } catch (err) {
+        showNotice(err.message || 'Не удалось отменить');
+      }
+      render();
+    }
+
+    function renderRejectModal() {
+      if (!state.rejectModal) return '';
+      const rid = state.rejectModal.id;
+      return `
+        <div class="admin-modal">
+          <button type="button" class="admin-modal-dismiss" data-action="admin-reject-close" aria-label="Закрыть"></button>
+          <div class="admin-modal-panel">
+            <h3 class="section-title" style="margin:0;">Отмена заявки #${rid}</h3>
+            <p class="muted" style="margin-top:8px;line-height:1.45;">Комментарий увидит клиент в приложении и в Telegram.</p>
+            <textarea data-reject-comment placeholder="Причина отмены (обязательно)" style="width:100%;min-height:88px;margin-top:10px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+            <div class="actions actions--single" style="margin-top:16px;">
+              <button class="btn" type="button" data-action="admin-reject-submit" data-id="${rid}" style="background:var(--danger);">Отменить заявку</button>
+              <button class="btn-outline" type="button" data-action="admin-reject-close" style="margin-top:10px;">Закрыть</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     async function revisionRespond(requestId, decision) {
       try {
         await api('/api/request/revision-response', {
@@ -1341,7 +1577,8 @@
             decision,
           }),
         });
-        await loadRequests();
+        if (state.isAdmin) await loadAdminRequests();
+        else await loadRequests();
         notifySuccess();
         showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Восстановлен прежний состав заявки');
       } catch (err) {
@@ -1402,11 +1639,13 @@
         state.salon = data.salon || null;
         state.meMessage = data.message || '';
         state.isAdmin = !!data.is_admin;
+        state.stats = data.stats || { approved_rub: 0, approved_stems: 0 };
       } catch (err) {
         state.linked = false;
         state.salon = null;
         state.meMessage = 'Не удалось загрузить профиль салона.';
         state.isAdmin = false;
+        state.stats = { approved_rub: 0, approved_stems: 0 };
       } finally {
         state.loadingProfile = false;
         render();
@@ -1507,12 +1746,20 @@
       state.submitting = true;
       render();
       try {
+        const dd = (state.deliveryDate || '').trim().slice(0, 10);
+        if (!dd || dd.length < 10) {
+          showNotice('Укажите желаемую дату поставки');
+          state.submitting = false;
+          render();
+          return;
+        }
         await api('/api/order', {
           method: 'POST',
           body: JSON.stringify({
             telegram_id: tgIdForApi(),
             telegram_name: state.telegramName,
             telegram_username: state.telegramUsername,
+            delivery_date: dd,
             items: items.map((item) => ({
               id: item.id,
               name: item.name,
@@ -1522,6 +1769,7 @@
           }),
         });
         state.cart = {};
+        state.deliveryDate = '';
         state.activeTab = 'orders';
         await loadRequests();
         notifySuccess();
@@ -1590,6 +1838,9 @@
     }
 
     function goToCheckout() {
+      if (!state.deliveryDate || state.deliveryDate.length < 10) {
+        state.deliveryDate = new Date().toISOString().slice(0, 10);
+      }
       state.activeTab = 'checkout';
       render();
     }
@@ -1611,30 +1862,37 @@
 
     function renderHeader() {
       const logo = '<img class="header-logo" src="/miniapp/blossom_logo.png" alt="" width="42" height="42" loading="lazy" decoding="async" />';
+      const salonCorner = headerSalonLogoHtml();
       if (state.isAdmin) {
         const sub = state.linked && state.salon?.name
           ? escapeHtml(state.salon.name)
           : 'Blossom Flower Farm';
         return `
         <header class="header">
-          <div class="header-brand">
-            ${logo}
-            <div class="header-brand-text">
-              <div class="eyebrow">${sub}</div>
-              <h1 class="title">Личный кабинет Админ</h1>
+          <div class="header-row">
+            <div class="header-brand">
+              ${logo}
+              <div class="header-brand-text">
+                <div class="eyebrow">${sub}</div>
+                <h1 class="title">Личный кабинет Админ</h1>
+              </div>
             </div>
+            ${salonCorner}
           </div>
         </header>`;
       }
       const salonName = state.linked && state.salon?.name ? state.salon.name : 'Гость';
       return `
         <header class="header">
-          <div class="header-brand">
-            ${logo}
-            <div class="header-brand-text">
-              <div class="eyebrow">Blossom Flower Farm</div>
-              <h1 class="title">Личный кабинет ${escapeHtml(salonName)}</h1>
+          <div class="header-row">
+            <div class="header-brand">
+              ${logo}
+              <div class="header-brand-text">
+                <div class="eyebrow">Blossom Flower Farm</div>
+                <h1 class="title">Личный кабинет ${escapeHtml(salonName)}</h1>
+              </div>
             </div>
+            ${salonCorner}
           </div>
         </header>
       `;
@@ -1796,12 +2054,15 @@
     }
 
     function renderCheckout() {
+      const dd = state.deliveryDate || new Date().toISOString().slice(0, 10);
       return `
         <section class="stack">
           <div class="panel">
             <h2 class="section-title">Оформление заявки</h2>
             <div class="muted" style="margin-top:6px;">После отправки менеджер получит заявку и ответит в Telegram.</div>
-            <div class="detail-grid">
+            <label class="detail-label" style="display:block;margin-top:16px;">Желаемая дата поставки</label>
+            <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" style="width:100%;margin-top:8px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
+            <div class="detail-grid" style="margin-top:16px;">
               <div class="detail-card">
                 <div class="detail-label">Салон</div>
                 <div class="detail-value">${escapeHtml(state.salon?.name || 'Не привязан')}</div>
@@ -1834,19 +2095,29 @@
           </div>
           ${state.loadingRequests ? `<div class="empty">Загружаем заявки...</div>` : ''}
           ${!state.loadingRequests && !state.requests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
-          ${state.requests.map((item) => `
+          ${state.requests.map((item) => {
+            const st = item.status || '';
+            const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
+            const note = (item.status === 'rejected' && item.manager_note) ? escapeHtml(item.manager_note) : '';
+            return `
             <article class="request-card">
-              <div class="request-head">
-                <div>
+              <div class="request-card-top">
+                <div class="request-card-top-left">
                   <div class="product-name">Заявка #${item.id}</div>
-                  <div class="muted" style="margin-top:4px;">${escapeHtml(item.salon_name || 'Не привязан к салону')}</div>
+                  <div class="muted" style="margin-top:4px;">${escapeHtml(item.salon_name || 'Салон')}</div>
                 </div>
-                <span class="request-status ${item.status}">${escapeHtml(requestStatusLabel(item.status))}</span>
+                <div class="request-card-meta">
+                  <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, false))}</span>
+                  <div class="muted" style="font-size:12px;font-weight:600;">${formatAdminTime(item.created_at)}</div>
+                </div>
               </div>
-              <div class="muted" style="margin-top:10px;">Стеблей: ${item.total_stems || 0} · Сумма: ${money(item.total_amount || 0)}</div>
-              <div class="stack" style="gap:8px; margin-top:12px;">
-                ${(item.items || []).map((row) => `<div class="muted">• ${escapeHtml(row.name)} — ${row.qty} шт</div>`).join('')}
+              <div class="request-stems-hero">${item.total_stems || 0}<span>стеблей</span></div>
+              <div class="request-sum-line">${money(item.total_amount || 0)}</div>
+              ${dd ? `<div class="request-delivery-line">Поставка: <b>${escapeHtml(dd)}</b></div>` : ''}
+              <div class="request-items-list">
+                ${(item.items || []).map((row) => `• ${escapeHtml(row.name)} — ${row.qty} шт`).join('<br/>')}
               </div>
+              ${note ? `<div class="request-cancel-note"><b>Комментарий менеджера:</b><br/>${note}</div>` : ''}
               ${item.status === 'change_requested' && (item.previous_items || []).length ? `
                 <div class="revision-banner" style="margin-top:12px;">
                   <b>Менеджер внёс изменения.</b> Примите новый состав или отклоните заявку целиком.
@@ -1863,7 +2134,8 @@
                 </div>
               ` : ''}
             </article>
-          `).join('')}
+          `;
+          }).join('')}
         </section>
       `;
     }
@@ -1902,20 +2174,40 @@
             <span class="admin-profile-strip__icon" aria-hidden="true">${iconNav.admin}</span>
             <div>
               <p class="admin-profile-strip__title">Личный кабинет Админ</p>
-              <p class="admin-profile-strip__text">Ниже — ваш салон как клиент Blossom. Вкладка «Админ» внизу: все заявки и правки каталога в базе.</p>
+              <p class="admin-profile-strip__text">Ниже — ваш салон как клиент Blossom. Заявки всех клиентов — во вкладке «Заявки», каталог в базе — в «Админ».</p>
             </div>
           </div>` : ''}
           <div class="profile-card">
             <div class="profile-top">
-              <div class="profile-avatar">${state.isAdmin ? `<span style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:var(--primary);background:var(--primary-soft);border-radius:18px;">${iconNav.admin}</span>` : '🏬'}</div>
+              <div class="profile-avatar">${profileSalonAvatarInner()}</div>
               <div>
-                <div class="product-name">${escapeHtml(state.salon.name || 'Салон')}</div>
-                <div class="muted">Оптовый кабинет Blossom Flower Farm</div>
+                <div class="profile-name-row">
+                  <span class="product-name">${escapeHtml(state.salon.name || 'Салон')}</span>
+                  <span class="verified-badge" title="Профиль подтверждён">${verifiedSvg}</span>
+                </div>
+                <div class="muted">Корпоративный кабинет постоянного клиента</div>
+              </div>
+            </div>
+            <div class="profile-stats-panel">
+              <h4>Статистика закупок</h4>
+              <div class="profile-stats-grid">
+                <div>
+                  <div class="profile-stat-val">${Math.round(state.stats.approved_stems || 0)}</div>
+                  <div class="profile-stat-lbl">стеблей подтверждено</div>
+                </div>
+                <div>
+                  <div class="profile-stat-val">${money(state.stats.approved_rub || 0)}</div>
+                  <div class="profile-stat-lbl">сумма подтверждённых заявок</div>
+                </div>
               </div>
             </div>
             <div class="info-grid">
               <div class="info-card">
-                <div class="detail-label">Телефон</div>
+                <div class="detail-label">Менеджер</div>
+                <div class="detail-value">${escapeHtml(state.telegramName || '—')}</div>
+              </div>
+              <div class="info-card">
+                <div class="detail-label">Телефон салона</div>
                 <div class="detail-value">${escapeHtml(state.salon.phone || '—')}</div>
               </div>
               <div class="info-card">
@@ -1925,10 +2217,6 @@
               <div class="info-card">
                 <div class="detail-label">Статус</div>
                 <div class="detail-value">Активный клиент</div>
-              </div>
-              <div class="info-card">
-                <div class="detail-label">Поставщик</div>
-                <div class="detail-value">Blossom Flower Farm</div>
               </div>
             </div>
           </div>
@@ -2003,23 +2291,29 @@
     function renderAdminRequestCard(item) {
       const st = item.status || '';
       const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
+      const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
+      const canAct = item.status === 'new' || item.status === 'change_requested';
       return `
         <article class="admin-req-card status-${stCls}">
           <div class="admin-req-top">
             <div>
               <div class="product-name">#${item.id}</div>
-              <div class="muted" style="margin-top:2px;font-size:12px;">${money(item.total_amount || 0)} · ${item.total_stems || 0} ст.</div>
+              <div class="request-stems-hero" style="margin-top:8px;font-size:22px;">${item.total_stems || 0}<span>стеблей</span></div>
+              <div class="muted" style="margin-top:4px;font-size:13px;font-weight:700;">${money(item.total_amount || 0)}</div>
+              ${dd ? `<div class="request-delivery-line" style="margin-top:6px;">Поставка: <b>${escapeHtml(dd)}</b></div>` : ''}
             </div>
-            <div style="text-align:right;">
-              <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st))}</span>
+            <div class="admin-req-meta">
+              <span class="request-status ${st}">${escapeHtml(requestStatusLabel(st, true))}</span>
               <div class="admin-req-time">${formatAdminTime(item.created_at)}</div>
             </div>
           </div>
           <div class="admin-req-lines">
             ${(item.items || []).map((row) => `• ${escapeHtml(row.name)} — ${row.qty} шт`).join('<br/>')}
           </div>
-          ${(item.status === 'new' || item.status === 'change_requested') ? `
+          ${item.manager_note && st === 'rejected' ? `<div class="request-cancel-note" style="margin-top:10px;"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>` : ''}
+          ${canAct ? `
             <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Редактировать заявку</button>
+            <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить с комментарием</button>
           ` : ''}
         </article>
       `;
@@ -2043,6 +2337,8 @@
                 </div>
               </div>
             `).join('')}
+            <label class="detail-label" style="display:block;margin-top:16px;">Дата поставки</label>
+            <input type="date" data-admin-revise-delivery value="${escapeAttr(ed.deliveryDate || '')}" style="width:100%;margin-top:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
             <label class="detail-label" style="display:block;margin-top:16px;">Комментарий клиенту</label>
             <textarea data-admin-revise-comment placeholder="Кратко опишите изменения (обязательно)" style="width:100%;min-height:80px;margin-top:6px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
             <div class="actions actions--single" style="margin-top:16px;">
@@ -2054,53 +2350,19 @@
       `;
     }
 
-    function renderAdmin() {
+    function renderAdminOrdersBoard() {
       if (!tg || !tg.initData) {
         return `<section class="stack"><div class="warning">Откройте мини-приложение из Telegram — для админки нужна подпись WebApp.</div></section>`;
-      }
-      const seg = `
-        <div class="admin-seg">
-          <button type="button" class="${state.adminSubTab === 'requests' ? 'active' : ''}" data-action="admin-sub" data-sub="requests">Заявки</button>
-          <button type="button" class="${state.adminSubTab === 'catalog' ? 'active' : ''}" data-action="admin-sub" data-sub="catalog">Каталог</button>
-        </div>
-      `;
-      if (state.adminSubTab === 'catalog') {
-        return `
-          <section class="stack">
-            ${seg}
-            ${state.loadingAdmin ? `<div class="empty">Загрузка…</div>` : ''}
-            <div class="panel">
-              <div class="section-head" style="margin-bottom:0;">
-                <h3 class="section-title">Каталог</h3>
-                <button class="soft-btn" type="button" data-action="admin-reload-catalog">Обновить</button>
-              </div>
-              <p class="muted" style="margin-top:8px;">Цена, отображаемый остаток и показ позиции клиентам.</p>
-              ${state.adminFlowers.map((f) => `
-                <div class="admin-flower-row">
-                  <div style="min-width:0;">
-                    <div class="product-name">${escapeHtml(f.name)}</div>
-                    <div class="admin-input-row">
-                      <input type="text" inputmode="decimal" data-admin-flower-price data-id="${f.id}" value="${f.price_rub != null && f.price_rub !== '' ? escapeHtml(String(f.price_rub)) : ''}" placeholder="Цена ₽" />
-                      <input type="text" inputmode="numeric" data-admin-flower-stock data-id="${f.id}" value="${f.stock_display_override != null && f.stock_display_override !== '' ? escapeHtml(String(f.stock_display_override)) : ''}" placeholder="Остаток" />
-                    </div>
-                  </div>
-                  <label class="toggle-row" style="flex-direction:column;align-items:flex-end;min-width:88px;">
-                    <span class="muted" style="font-size:10px;font-weight:700;">В каталоге</span>
-                    <input type="checkbox" data-admin-flower-vis data-id="${f.id}" ${f.catalog_visible !== false ? 'checked' : ''} />
-                  </label>
-                </div>
-              `).join('')}
-              <button class="btn" type="button" data-action="admin-save-catalog" style="width:100%;margin-top:18px;">Сохранить в базе</button>
-            </div>
-          </section>
-        `;
       }
       const filtered = filterAdminRequestsBySalon(state.adminRequests, state.adminSalonFilter);
       const board = buildAdminRequestBoard(filtered);
       const salonOpts = adminSalonFilterOptions(state.adminRequests);
       return `
         <section class="stack">
-          ${seg}
+          <div class="section-head">
+            <h2 class="section-title">Заявки клиентов</h2>
+            <button class="soft-btn" type="button" data-action="admin-reload-requests">Обновить</button>
+          </div>
           ${state.loadingAdmin ? `<div class="empty">Загрузка…</div>` : ''}
           ${!state.loadingAdmin && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
           ${!state.loadingAdmin && state.adminRequests.length ? `
@@ -2135,6 +2397,45 @@
       `;
     }
 
+    function renderOrdersView() {
+      if (state.isAdmin) return renderAdminOrdersBoard();
+      return renderRequests();
+    }
+
+    function renderAdmin() {
+      if (!tg || !tg.initData) {
+        return `<section class="stack"><div class="warning">Откройте мини-приложение из Telegram — для админки нужна подпись WebApp.</div></section>`;
+      }
+      return `
+          <section class="stack">
+            ${state.loadingAdmin ? `<div class="empty">Загрузка…</div>` : ''}
+            <div class="panel">
+              <div class="section-head" style="margin-bottom:0;">
+                <h3 class="section-title">Каталог</h3>
+                <button class="soft-btn" type="button" data-action="admin-reload-catalog">Обновить</button>
+              </div>
+              <p class="muted" style="margin-top:8px;">Цена, отображаемый остаток и показ позиции клиентам.</p>
+              ${state.adminFlowers.map((f) => `
+                <div class="admin-flower-row">
+                  <div style="min-width:0;">
+                    <div class="product-name">${escapeHtml(f.name)}</div>
+                    <div class="admin-input-row">
+                      <input type="text" inputmode="decimal" data-admin-flower-price data-id="${f.id}" value="${f.price_rub != null && f.price_rub !== '' ? escapeHtml(String(f.price_rub)) : ''}" placeholder="Цена ₽" />
+                      <input type="text" inputmode="numeric" data-admin-flower-stock data-id="${f.id}" value="${f.stems_count != null && f.stems_count !== '' ? escapeHtml(String(f.stems_count)) : ''}" placeholder="Остаток (шт.)" />
+                    </div>
+                  </div>
+                  <label class="toggle-row" style="flex-direction:column;align-items:flex-end;min-width:88px;">
+                    <span class="muted" style="font-size:10px;font-weight:700;">В каталоге</span>
+                    <input type="checkbox" data-admin-flower-vis data-id="${f.id}" ${f.catalog_visible !== false ? 'checked' : ''} />
+                  </label>
+                </div>
+              `).join('')}
+              <button class="btn" type="button" data-action="admin-save-catalog" style="width:100%;margin-top:18px;">Сохранить в базе</button>
+            </div>
+          </section>
+        `;
+    }
+
     function renderOrderSuccessOverlay() {
       if (!state.orderSuccessVisible) return '';
       return `
@@ -2155,14 +2456,20 @@
 
     function renderNav() {
       const count = cartCount();
-      const tabs = [
-        ['home', iconNav.home, 'Каталог'],
-        ['cart', iconNav.cart, 'Корзина'],
-        ['orders', iconNav.orders, 'Заявки'],
-        ['profile', iconNav.person, 'Профиль'],
-      ];
-      if (state.isAdmin) tabs.push(['admin', iconNav.admin, 'Админ']);
-      const gridClass = tabs.length > 4 ? 'nav-grid cols-5' : 'nav-grid';
+      const tabs = state.isAdmin
+        ? [
+            ['home', iconNav.home, 'Каталог'],
+            ['orders', iconNav.orders, 'Заявки'],
+            ['profile', iconNav.person, 'Профиль'],
+            ['admin', iconNav.admin, 'Админ'],
+          ]
+        : [
+            ['home', iconNav.home, 'Каталог'],
+            ['cart', iconNav.cart, 'Корзина'],
+            ['orders', iconNav.orders, 'Заявки'],
+            ['profile', iconNav.person, 'Профиль'],
+          ];
+      const gridClass = 'nav-grid cols-4';
       return `
         <nav class="bottom-nav">
           <div class="${gridClass}">
@@ -2185,7 +2492,7 @@
         : state.activeTab === 'product' ? renderProduct()
         : state.activeTab === 'cart' ? renderCart()
         : state.activeTab === 'checkout' ? renderCheckout()
-        : state.activeTab === 'orders' ? renderRequests()
+        : state.activeTab === 'orders' ? renderOrdersView()
         : renderProfile();
 
       app.innerHTML = `
@@ -2199,6 +2506,7 @@
           ${state.notice ? `<div class="toast">${escapeHtml(state.notice)}</div>` : ''}
         </div>
         ${renderAdminEditorModal()}
+        ${renderRejectModal()}
         ${renderOrderSuccessOverlay()}
       `;
 
@@ -2207,6 +2515,9 @@
 
     document.addEventListener('change', (event) => {
       const t = event.target;
+      if (t && t.matches && t.matches('[data-checkout-delivery]')) {
+        state.deliveryDate = (t.value || '').slice(0, 10);
+      }
       if (t && t.matches && t.matches('[data-action="admin-filter-salon"]')) {
         const v = t.value;
         state.adminSalonFilter = v === 'all' ? 'all' : decodeURIComponent(v);
@@ -2234,7 +2545,7 @@
         const f = state.adminFlowers.find((x) => x.id === fid);
         if (f) {
           const v = t.value.trim();
-          f.stock_display_override = v === '' ? null : v;
+          f.stems_count = v === '' ? null : v;
         }
       }
     });
@@ -2273,15 +2584,14 @@
         changeQty(id, -999999);
       }
       if (action === 'reload-requests') {
-        await loadRequests();
+        if (state.isAdmin) await loadAdminRequests();
+        else await loadRequests();
+      }
+      if (action === 'admin-reload-requests') {
+        await loadAdminRequests();
       }
       if (action === 'cancel-request') {
         await cancelRequest(id);
-      }
-      if (action === 'admin-sub') {
-        state.adminSubTab = target.dataset.sub || 'requests';
-        if (state.adminSubTab === 'catalog') await loadAdminCatalog();
-        else await loadAdminRequests();
       }
       if (action === 'admin-reload-catalog') {
         await loadAdminCatalog();
@@ -2303,6 +2613,17 @@
       }
       if (action === 'admin-editor-save') {
         await submitAdminRevision();
+      }
+      if (action === 'admin-reject-open') {
+        state.rejectModal = { id: Number(id) };
+        render();
+      }
+      if (action === 'admin-reject-close') {
+        state.rejectModal = null;
+        render();
+      }
+      if (action === 'admin-reject-submit') {
+        await submitAdminReject(Number(id));
       }
       if (action === 'revision-accept') {
         await revisionRespond(Number(id), 'accept');
@@ -2358,7 +2679,9 @@
         }
       }, 5000);
       try {
-        await Promise.all([loadProducts(), loadProfile(), loadRequests()]);
+        await Promise.all([loadProducts(), loadProfile()]);
+        if (state.isAdmin) await loadAdminRequests();
+        else await loadRequests();
         const hm = /adminReq=(\d+)/.exec(window.location.hash || '');
         if (hm && state.isAdmin) await openAdminEditor(Number(hm[1]));
       } finally {
