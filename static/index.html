@@ -731,6 +731,14 @@
       -webkit-appearance: none;
       appearance: none;
     }
+    .qty-stepper:not(.qty-stepper--cart) .qty-input-field {
+      flex: 0 1 72px;
+      max-width: 72px;
+      min-width: 52px;
+      padding: 8px 4px;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
     .qty-input-field:focus {
       outline: 2px solid rgba(31, 122, 91, .35);
       outline-offset: 1px;
@@ -879,7 +887,7 @@
     .admin-req-card.status-approved { border-left-color: #15803d; }
     .admin-req-card.status-rejected,
     .admin-req-card.status-rejected_by_client,
-    .admin-req-card.status-cancelled_by_client { border-left-color: #9ca3af; }
+    .admin-req-card.status-cancelled_by_client { border-left-color: #dc2626; }
     .admin-req-top {
       display: flex;
       justify-content: space-between;
@@ -1141,27 +1149,48 @@
       margin-top: 8px;
     }
     .checkout-dow {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--muted);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .stock-avail-num {
+      font-size: 1.12em;
+      font-weight: 800;
+      letter-spacing: -0.02em;
     }
     .stock-lock-wrap {
       display: inline-flex;
       align-items: center;
-      gap: 3px;
-      margin-left: 8px;
-      padding: 2px 8px;
+      justify-content: center;
+      gap: 2px;
+      margin-left: 6px;
+      padding: 0 5px;
+      min-height: 20px;
       border-radius: 999px;
       background: #eceff2;
       color: #6c7380;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       vertical-align: middle;
+      line-height: 1;
+    }
+    .stock-lock-wrap > span:last-child {
+      min-width: 0.6em;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
     }
     .stock-lock-icon {
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       opacity: .85;
+      flex-shrink: 0;
+    }
+    .action-overlay-error-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto 18px;
+      color: var(--danger);
     }
   </style>
 </head>
@@ -1207,7 +1236,7 @@
       linked: false,
       salon: null,
       meMessage: '',
-      loadingProducts: true,
+      loadingProducts: false,
       loadingProfile: true,
       loadingRequests: false,
       apiError: '',
@@ -1221,7 +1250,8 @@
       rejectModal: null,
       adminRequests: [],
       adminFlowers: [],
-      loadingAdmin: false,
+      loadingAdminRequests: false,
+      loadingAdminCatalog: false,
       adminEditor: null,
       /** { phase:'loading'|'success', variant, title?, sub?, loadingText? } | null */
       actionOverlay: null,
@@ -1255,11 +1285,12 @@
       }
     }
 
-    function weekdayShortRu(iso) {
+    /** Полное название дня недели для оформления заявки (рядом с датой). */
+    function weekdayFullRu(iso) {
       if (!iso || String(iso).length < 10) return '';
       try {
         const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
-        const wd = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+        const wd = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
         return wd[d.getDay()];
       } catch (_) {
         return '';
@@ -1280,6 +1311,17 @@
     function notifySuccess() {
       try { tg?.HapticFeedback?.notificationOccurred?.('success'); } catch (_) {}
     }
+    function translateApiError(msg) {
+      const key = String(msg || '').trim();
+      const map = {
+        request_cannot_be_cancelled: 'Заявка уже обработана — обновите список.',
+        request_not_deletable: 'Эту заявку нельзя удалить.',
+        request_not_editable: 'Заявка уже обработана.',
+        comment_required: 'Нужен комментарий.',
+      };
+      return map[key] || key;
+    }
+
     function showNotice(text) {
       state.notice = text;
       render();
@@ -1321,7 +1363,7 @@
       const lock = res > 0
         ? `<span class="stock-lock-wrap" title="В неподтверждённых заявках">${lockIconSvg}<span>${res}</span></span>`
         : '';
-      return `${stemPart}В наличии: <b>${avail}</b>${lock}`;
+      return `${stemPart}В наличии: <b class="stock-avail-num">${avail}</b>${lock}`;
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -1460,10 +1502,16 @@
       return data;
     }
 
-    async function loadAdminRequests() {
+    async function loadAdminRequests(silent = false) {
       if (!state.isAdmin) return;
-      state.loadingAdmin = true;
-      render();
+      let spinTimer = null;
+      if (!silent) {
+        spinTimer = window.setTimeout(() => {
+          spinTimer = null;
+          state.loadingAdminRequests = true;
+          render();
+        }, 280);
+      }
       try {
         const res = await fetch('/api/admin/requests', { headers: initDataHeaders() });
         const data = await res.json().catch(() => ({}));
@@ -1471,17 +1519,24 @@
         state.adminRequests = data.requests || [];
       } catch (err) {
         state.adminRequests = [];
-        showNotice(err.message || 'Не удалось загрузить заявки');
+        if (!silent) showNotice(translateApiError(err.message) || 'Не удалось загрузить заявки');
       } finally {
-        state.loadingAdmin = false;
+        if (spinTimer != null) window.clearTimeout(spinTimer);
+        state.loadingAdminRequests = false;
         render();
       }
     }
 
-    async function loadAdminCatalog() {
+    async function loadAdminCatalog(silent = false) {
       if (!state.isAdmin) return;
-      state.loadingAdmin = true;
-      render();
+      let spinTimer = null;
+      if (!silent) {
+        spinTimer = window.setTimeout(() => {
+          spinTimer = null;
+          state.loadingAdminCatalog = true;
+          render();
+        }, 280);
+      }
       try {
         const res = await fetch('/api/admin/catalog', { headers: initDataHeaders() });
         const data = await res.json().catch(() => ({}));
@@ -1489,9 +1544,10 @@
         state.adminFlowers = (data.flowers || []).map((f) => ({ ...f }));
       } catch (err) {
         state.adminFlowers = [];
-        showNotice(err.message || 'Не удалось загрузить каталог');
+        if (!silent) showNotice(err.message || 'Не удалось загрузить каталог');
       } finally {
-        state.loadingAdmin = false;
+        if (spinTimer != null) window.clearTimeout(spinTimer);
+        state.loadingAdminCatalog = false;
         render();
       }
     }
@@ -1516,7 +1572,7 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка сохранения');
-      await loadProducts();
+      await loadProducts(true);
       showNotice('Каталог сохранён');
     }
 
@@ -1570,12 +1626,6 @@
         render();
         return;
       }
-      if (comment.length < 2) {
-        state.actionOverlay = null;
-        showNotice('Добавьте комментарий для клиента');
-        render();
-        return;
-      }
       try {
         const [res] = await Promise.all([
           fetch(`/api/admin/request/${ed.id}/revise`, {
@@ -1589,8 +1639,8 @@
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
         state.adminEditor = null;
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        await loadAdminRequests();
-        await loadProducts();
+        await loadAdminRequests(true);
+        await loadProducts(true);
         window.clearTimeout(actionOverlayTimer);
         state.actionOverlay = {
           phase: 'success',
@@ -1599,12 +1649,12 @@
           sub: 'Клиент получит уведомление в Telegram',
         };
         render();
-        await sleep(2200);
+        await sleep(3600);
         state.actionOverlay = null;
         showNotice('Клиенту отправлены правки');
       } catch (err) {
         state.actionOverlay = null;
-        showNotice(err.message || 'Не удалось сохранить');
+        showNotice(translateApiError(err.message) || 'Не удалось сохранить');
       }
       render();
     }
@@ -1625,10 +1675,56 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
         state.rejectModal = null;
-        await loadAdminRequests();
+        await loadAdminRequests(true);
+        await loadProducts(true);
         showNotice('Заявка отменена, клиент уведомлён');
       } catch (err) {
         showNotice(err.message || 'Не удалось отменить');
+      }
+      render();
+    }
+
+    async function adminApproveRequest(requestId) {
+      try {
+        const res = await fetch(`/api/admin/request/${requestId}/approve`, {
+          method: 'POST',
+          headers: initDataHeaders(),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
+        await loadAdminRequests(true);
+        await loadProducts(true);
+        showNotice('Заявка подтверждена');
+      } catch (err) {
+        showNotice(translateApiError(err.message) || 'Не удалось подтвердить');
+      }
+      render();
+    }
+
+    async function adminDeleteRequest(requestId) {
+      const ok = await new Promise((resolve) => {
+        if (tg && typeof tg.showConfirm === 'function') {
+          try {
+            tg.showConfirm('Удалить заявку из списка?', resolve);
+          } catch (_) {
+            resolve(window.confirm('Удалить заявку из списка?'));
+          }
+        } else {
+          resolve(window.confirm('Удалить заявку из списка?'));
+        }
+      });
+      if (!ok) return;
+      try {
+        const res = await fetch(`/api/admin/request/${requestId}`, {
+          method: 'DELETE',
+          headers: initDataHeaders(),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Ошибка');
+        await loadAdminRequests(true);
+        showNotice('Заявка удалена');
+      } catch (err) {
+        showNotice(translateApiError(err.message) || 'Не удалось удалить');
       }
       render();
     }
@@ -1672,9 +1768,9 @@
           }),
           sleep(750),
         ]);
-        if (state.isAdmin) await loadAdminRequests();
-        else await loadRequests();
-        await loadProducts();
+        if (state.isAdmin) await loadAdminRequests(true);
+        else await loadRequests(true);
+        await loadProducts(true);
         notifySuccess();
         if (decision === 'accept') {
           state.actionOverlay = {
@@ -1692,7 +1788,7 @@
           };
         }
         render();
-        await sleep(2400);
+        await sleep(3800);
         state.actionOverlay = null;
         showNotice(decision === 'accept' ? 'Вы приняли изменения' : 'Восстановлен прежний состав заявки');
       } catch (err) {
@@ -1735,9 +1831,13 @@
     }
 
     async function loadProfile() {
-      state.loadingProfile = true;
-      render();
+      let spinTimer = window.setTimeout(() => {
+        spinTimer = null;
+        state.loadingProfile = true;
+        render();
+      }, 280);
       if (!state.telegramId) {
+        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.linked = false;
         state.salon = null;
         state.meMessage = 'Откройте мини-приложение через Telegram.';
@@ -1763,30 +1863,45 @@
         state.isAdmin = false;
         state.stats = { approved_rub: 0, approved_stems: 0 };
       } finally {
+        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingProfile = false;
         render();
       }
     }
 
-    async function loadProducts() {
-      state.loadingProducts = true;
-      render();
+    async function loadProducts(silent = false) {
+      let spinTimer = null;
+      if (!silent) {
+        spinTimer = window.setTimeout(() => {
+          spinTimer = null;
+          state.loadingProducts = true;
+          render();
+        }, 300);
+      }
       try {
         const data = await apiWakeAware('/api/products');
         state.products = data.products || [];
         state.categories = data.categories || [{ id: 'all', name: 'Все', count: state.products.length }];
+        state.apiError = '';
       } catch (err) {
         state.apiError = err.message || 'Не удалось загрузить каталог';
       } finally {
+        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingProducts = false;
         render();
       }
     }
 
-    async function loadRequests() {
+    async function loadRequests(silent = false) {
       if (!state.telegramId) return;
-      state.loadingRequests = true;
-      render();
+      let spinTimer = null;
+      if (!silent) {
+        spinTimer = window.setTimeout(() => {
+          spinTimer = null;
+          state.loadingRequests = true;
+          render();
+        }, 300);
+      }
       try {
         const data = await apiWakeAware('/api/my-requests', {
           method: 'POST',
@@ -1796,6 +1911,7 @@
       } catch (err) {
         state.requests = [];
       } finally {
+        if (spinTimer != null) window.clearTimeout(spinTimer);
         state.loadingRequests = false;
         render();
       }
@@ -1891,8 +2007,8 @@
         state.cart = {};
         state.deliveryDate = '';
         state.activeTab = 'orders';
-        await loadRequests();
-        await loadProducts();
+        await loadRequests(true);
+        await loadProducts(true);
         notifySuccess();
         state.actionOverlay = {
           phase: 'success',
@@ -1901,7 +2017,7 @@
           sub: 'Менеджер увидит её в Telegram',
         };
         render();
-        await sleep(2600);
+        await sleep(4200);
         state.actionOverlay = null;
         showNotice('Заявка отправлена менеджеру');
       } catch (err) {
@@ -1925,8 +2041,8 @@
           }),
           sleep(700),
         ]);
-        await loadRequests();
-        await loadProducts();
+        await loadRequests(true);
+        await loadProducts(true);
         notifySuccess();
         state.actionOverlay = {
           phase: 'success',
@@ -1935,12 +2051,20 @@
           sub: 'Резерв по позициям снят',
         };
         render();
-        await sleep(2200);
+        await sleep(3800);
         state.actionOverlay = null;
         showNotice('Заявка отменена');
       } catch (err) {
+        state.actionOverlay = {
+          phase: 'error',
+          variant: 'cancel-fail',
+          title: 'Не удалось отменить',
+          sub: 'Обновите страницу, чтобы увидеть актуальный статус заявки.',
+        };
+        render();
+        await sleep(4200);
         state.actionOverlay = null;
-        showNotice(err.message || 'Не удалось отменить заявку');
+        showNotice(translateApiError(err.message) || 'Не удалось отменить заявку');
       }
       render();
     }
@@ -2072,6 +2196,7 @@
         <section>
           <div class="section-head">
             <h3 class="section-title">Каталог</h3>
+            <button class="soft-btn" type="button" data-action="reload-catalog">Обновить</button>
           </div>
           <div class="stack">
             ${state.loadingProducts ? `<div class="empty">Загружаем каталог...</div>` : ''}
@@ -2203,7 +2328,7 @@
 
     function renderCheckout() {
       const dd = state.deliveryDate || new Date().toISOString().slice(0, 10);
-      const dow = weekdayShortRu(dd);
+      const dowFull = weekdayFullRu(dd);
       return `
         <section class="stack">
           <div class="panel">
@@ -2212,7 +2337,7 @@
             <label class="detail-label" style="display:block;margin-top:16px;">Желаемая дата поставки</label>
             <div class="checkout-date-row">
             <input type="date" data-checkout-delivery class="checkout-date-input" value="${escapeAttr(dd)}" style="flex:1;min-width:0;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
-            ${dow ? `<span class="checkout-dow" data-checkout-dow>(${dow})</span>` : ''}
+            ${dowFull ? `<span class="checkout-dow" data-checkout-dow>(${escapeHtml(dowFull)})</span>` : ''}
             </div>
             <div class="detail-grid" style="margin-top:16px;">
               <div class="detail-card">
@@ -2445,6 +2570,7 @@
       const stCls = st ? String(st).replace(/[^a-z_]/gi, '') : 'none';
       const dd = item.delivery_date ? formatRequestDate(String(item.delivery_date).slice(0, 10)) : '';
       const canAct = item.status === 'new' || item.status === 'change_requested';
+      const canDelete = st === 'rejected' || st === 'cancelled_by_client' || st === 'rejected_by_client';
       return `
         <article class="admin-req-card status-${stCls}">
           <div class="admin-req-top">
@@ -2464,8 +2590,15 @@
           </div>
           ${item.manager_note && st === 'rejected' ? `<div class="request-cancel-note" style="margin-top:10px;"><b>Комментарий при отмене:</b> ${escapeHtml(item.manager_note)}</div>` : ''}
           ${canAct ? `
-            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Редактировать заявку</button>
+            <button class="btn" type="button" data-action="admin-approve-req" data-id="${item.id}" style="width:100%;margin-top:12px;">Подтвердить заявку</button>
+            <button class="btn-outline" type="button" data-action="admin-open-req" data-id="${item.id}" style="width:100%;margin-top:8px;">Редактировать заявку</button>
             <button class="btn-outline" type="button" data-action="admin-reject-open" data-id="${item.id}" style="width:100%;margin-top:8px;border-color:#fecaca;color:var(--danger);">Отменить с комментарием</button>
+          ` : ''}
+          ${canDelete ? `
+            <button class="btn-outline" type="button" data-action="admin-delete-req" data-id="${item.id}" style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:#fecaca;color:var(--danger);">
+              ${trashIconSvg}
+              <span>Удалить из списка</span>
+            </button>
           ` : ''}
         </article>
       `;
@@ -2492,7 +2625,7 @@
             <label class="detail-label" style="display:block;margin-top:16px;">Дата поставки</label>
             <input type="date" data-admin-revise-delivery value="${escapeAttr(ed.deliveryDate || '')}" style="width:100%;margin-top:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
             <label class="detail-label" style="display:block;margin-top:16px;">Комментарий клиенту</label>
-            <textarea data-admin-revise-comment placeholder="Кратко опишите изменения (обязательно)" style="width:100%;min-height:80px;margin-top:6px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+            <textarea data-admin-revise-comment placeholder="Комментарий для клиента (по желанию)" style="width:100%;min-height:80px;margin-top:6px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;"></textarea>
             <div class="actions actions--single" style="margin-top:16px;">
               <button class="btn" data-action="admin-editor-save" type="button">Отправить клиенту</button>
               <button class="btn-outline" data-action="admin-editor-close" type="button" style="margin-top:10px;">Закрыть</button>
@@ -2515,9 +2648,9 @@
             <h2 class="section-title">Заявки клиентов</h2>
             <button class="soft-btn" type="button" data-action="admin-reload-requests">Обновить</button>
           </div>
-          ${state.loadingAdmin ? `<div class="empty">Загрузка…</div>` : ''}
-          ${!state.loadingAdmin && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
-          ${!state.loadingAdmin && state.adminRequests.length ? `
+          ${state.loadingAdminRequests ? `<div class="empty">Загрузка…</div>` : ''}
+          ${!state.loadingAdminRequests && !state.adminRequests.length ? `<div class="empty">Заявок пока нет.</div>` : ''}
+          ${!state.loadingAdminRequests && state.adminRequests.length ? `
             <div class="admin-toolbar">
               <label for="admin-salon-filter">Салон</label>
               <select id="admin-salon-filter" data-action="admin-filter-salon" class="admin-filter-select" aria-label="Фильтр по салону">
@@ -2560,7 +2693,7 @@
       }
       return `
           <section class="stack">
-            ${state.loadingAdmin ? `<div class="empty">Загрузка…</div>` : ''}
+            ${state.loadingAdminCatalog ? `<div class="empty">Загрузка…</div>` : ''}
             <div class="panel">
               <div class="section-head" style="margin-bottom:0;">
                 <h3 class="section-title">Каталог</h3>
@@ -2597,6 +2730,19 @@
           <div class="order-success-card">
             <div class="action-overlay-spinner"></div>
             <p class="action-overlay-loading-text">${escapeHtml(ov.loadingText || 'Подождите…')}</p>
+          </div>
+        </div>`;
+      }
+      if (ov.phase === 'error') {
+        return `
+        <div class="order-success-overlay" aria-live="polite">
+          <div class="order-success-card">
+            <svg class="action-overlay-error-icon" viewBox="0 0 52 52" aria-hidden="true">
+              <circle cx="26" cy="26" r="23" fill="none" stroke="currentColor" stroke-width="2.5"/>
+              <path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M18 18l16 16M34 18L18 34"/>
+            </svg>
+            <p class="order-success-title">${escapeHtml(ov.title || 'Ошибка')}</p>
+            <p class="order-success-sub">${escapeHtml(ov.sub || '')}</p>
           </div>
         </div>`;
       }
@@ -2653,6 +2799,17 @@
 
     function render() {
       const app = document.getElementById('app');
+      const ae = document.activeElement;
+      let qtyFocusId = null;
+      let qtySelStart = null;
+      let qtySelEnd = null;
+      if (ae && ae.getAttribute && ae.getAttribute('data-action') === 'qty-input' && ae.dataset && ae.dataset.id != null) {
+        qtyFocusId = String(ae.dataset.id);
+        try {
+          qtySelStart = ae.selectionStart;
+          qtySelEnd = ae.selectionEnd;
+        } catch (_) {}
+      }
       const screen = state.activeTab === 'admin' ? renderAdmin()
         : state.activeTab === 'home' ? renderHome()
         : state.activeTab === 'product' ? renderProduct()
@@ -2675,6 +2832,16 @@
         ${renderRejectModal()}
         ${renderActionOverlay()}
       `;
+
+      if (qtyFocusId != null) {
+        const inp = app.querySelector('[data-action="qty-input"][data-id="' + qtyFocusId + '"]');
+        if (inp && typeof inp.focus === 'function') {
+          inp.focus();
+          if (qtySelStart != null && typeof inp.setSelectionRange === 'function') {
+            try { inp.setSelectionRange(qtySelStart, qtySelEnd); } catch (_) {}
+          }
+        }
+      }
 
       updateTelegramButtons();
     }
@@ -2751,18 +2918,27 @@
       if (action === 'remove') {
         changeQty(id, -999999);
       }
+      if (action === 'reload-catalog') {
+        await loadProducts(false);
+      }
       if (action === 'reload-requests') {
-        if (state.isAdmin) await loadAdminRequests();
-        else await loadRequests();
+        if (state.isAdmin) await loadAdminRequests(false);
+        else await loadRequests(false);
       }
       if (action === 'admin-reload-requests') {
-        await loadAdminRequests();
+        await loadAdminRequests(false);
+      }
+      if (action === 'admin-approve-req') {
+        await adminApproveRequest(Number(id));
+      }
+      if (action === 'admin-delete-req') {
+        await adminDeleteRequest(Number(id));
       }
       if (action === 'cancel-request') {
         await cancelRequest(id);
       }
       if (action === 'admin-reload-catalog') {
-        await loadAdminCatalog();
+        await loadAdminCatalog(false);
       }
       if (action === 'admin-save-catalog') {
         try {
@@ -2833,7 +3009,7 @@
         qtyInputBlurTimer = window.setTimeout(() => {
           qtyInputBlurTimer = null;
           setQtyFromInput(pid, val);
-        }, 200);
+        }, 450);
       },
       true,
     );
@@ -2847,9 +3023,10 @@
         }
       }, 5000);
       try {
-        await Promise.all([loadProducts(), loadProfile()]);
-        if (state.isAdmin) await loadAdminRequests();
-        else await loadRequests();
+        await loadProfile();
+        await loadProducts(false);
+        if (state.isAdmin) await loadAdminRequests(false);
+        else await loadRequests(false);
         const hm = /adminReq=(\d+)/.exec(window.location.hash || '');
         if (hm && state.isAdmin) await openAdminEditor(Number(hm[1]));
       } finally {
@@ -2857,6 +3034,28 @@
         render();
       }
     }
+
+    window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      loadProducts(true);
+      if (state.isAdmin) {
+        if (state.activeTab === 'orders') loadAdminRequests(true);
+        if (state.activeTab === 'admin') loadAdminCatalog(true);
+      } else if (state.telegramId) {
+        loadRequests(true);
+      }
+    }, 48000);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      loadProducts(true);
+      if (state.isAdmin) {
+        loadAdminRequests(true);
+        loadAdminCatalog(true);
+      } else if (state.telegramId) {
+        loadRequests(true);
+      }
+    });
 
     init();
   </script>

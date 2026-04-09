@@ -170,6 +170,11 @@ def supabase_patch(path: str, json_data: Any, params: Optional[Dict[str, Any]] =
     return supabase_request("PATCH", path, params=params, json_data=json_data, prefer_return=prefer_return)
 
 
+def supabase_delete(path: str, params: Optional[Dict[str, Any]] = None,
+                    prefer_return: bool = False) -> requests.Response:
+    return supabase_request("DELETE", path, params=params, prefer_return=prefer_return)
+
+
 def tg_api(method: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if not BOT_TOKEN:
         raise RuntimeError("BLOSSOM_BOT_TOKEN is not set")
@@ -853,8 +858,6 @@ def api_admin_revise_request(request_id: int):
     delivery_new = (payload.get("delivery_date") or "").strip()
     if not items:
         return jsonify({"ok": False, "error": "items required"}), 400
-    if not comment:
-        return jsonify({"ok": False, "error": "comment required"}), 400
 
     row = load_request_by_id(request_id)
     if not row:
@@ -888,7 +891,7 @@ def api_admin_revise_request(request_id: int):
         "items": normalized,
         "total_amount": round(total_amount, 2),
         "total_stems": total_stems,
-        "manager_note": comment,
+        "manager_note": comment if comment else None,
         "status": "change_requested",
         "updated_at": now_iso(),
     }
@@ -915,14 +918,76 @@ def api_admin_revise_request(request_id: int):
     if admin_message_id and ADMIN_CHAT_ID:
         tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
     if ADMIN_CHAT_ID:
+        note_line = f"Комментарий: {html.escape(comment)}" if comment else "Комментарий не указан."
         tg_send_message(
             ADMIN_CHAT_ID,
             f"✏️ Заявка #{request_id} изменена менеджером.\n{build_items_summary(normalized)}\n"
             f"Итого: <b>{total_amount:.0f} ₽</b>, стеблей: <b>{total_stems}</b>\n"
-            f"Комментарий: {html.escape(comment)}",
+            f"{note_line}",
         )
     notify_client(updated, "change_requested")
     return jsonify({"ok": True, "request": updated})
+
+
+@app.post("/api/admin/request/<int:request_id>/approve")
+def api_admin_approve_request(request_id: int):
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    row = load_request_by_id(request_id)
+    if not row:
+        return jsonify({"ok": False, "error": "request_not_found"}), 404
+    if row.get("status") not in {"new", "change_requested"}:
+        return jsonify({"ok": False, "error": "request_not_editable"}), 400
+
+    items_for_inventory = row.get("items") or []
+    upd = supabase_patch(
+        REQUESTS_TABLE,
+        {"status": "approved", "updated_at": now_iso()},
+        params={"id": f"eq.{request_id}"},
+        prefer_return=True,
+    )
+    if not upd.ok:
+        return jsonify({"ok": False, "error": upd.text}), 500
+    updated = (upd.json() or [row])[0]
+    deduct_stems_from_inventory_for_items(items_for_inventory)
+
+    admin_message_id = row.get("admin_message_id")
+    if admin_message_id and ADMIN_CHAT_ID:
+        tg_clear_buttons(ADMIN_CHAT_ID, admin_message_id)
+    if ADMIN_CHAT_ID:
+        tg_send_message(
+            ADMIN_CHAT_ID,
+            f"✅ Заявка <b>#{request_id}</b> подтверждена через мини-приложение.",
+        )
+    notify_client(updated, "approved")
+    return jsonify({"ok": True, "request": updated})
+
+
+ADMIN_DELETABLE_STATUSES = frozenset({"rejected", "cancelled_by_client", "rejected_by_client"})
+
+
+@app.delete("/api/admin/request/<int:request_id>")
+def api_admin_delete_request(request_id: int):
+    error = ensure_env()
+    if error:
+        return jsonify({"ok": False, "error": error}), 500
+    _, err = require_admin_from_header()
+    if err:
+        return err[0], err[1]
+    row = load_request_by_id(request_id)
+    if not row:
+        return jsonify({"ok": False, "error": "request_not_found"}), 404
+    if row.get("status") not in ADMIN_DELETABLE_STATUSES:
+        return jsonify({"ok": False, "error": "request_not_deletable"}), 400
+
+    res = supabase_delete(REQUESTS_TABLE, params={"id": f"eq.{request_id}"}, prefer_return=False)
+    if not res.ok:
+        return jsonify({"ok": False, "error": res.text}), 500
+    return jsonify({"ok": True})
 
 
 @app.post("/api/feedback")
