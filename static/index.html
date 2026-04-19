@@ -2575,6 +2575,14 @@
       return 'Доброй ночи';
     }
 
+    function splashGreetingEmoji() {
+      const h = new Date().getHours();
+      if (h >= 4 && h < 12) return '☀️';
+      if (h >= 12 && h < 18) return '🌤️';
+      if (h >= 18 && h < 24) return '🌆';
+      return '🌙';
+    }
+
     function splashDisplayName() {
       const salon = state.salon;
       const cn = salon && salon.contact_name != null ? String(salon.contact_name).trim() : '';
@@ -2592,12 +2600,21 @@
     }
 
     function updateBootSplashGreeting() {
+      try {
+        if (window._bootPhraseTimer) window.clearInterval(window._bootPhraseTimer);
+        window._bootPhraseTimer = null;
+      } catch (_) {}
       const titleEl = document.querySelector('.boot-splash__title');
-      if (!titleEl) return;
-      titleEl.textContent = `${splashGreetingWord()}, ${splashDisplayName()}`;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => titleEl.classList.add('is-visible'));
-      });
+      const msgEl = document.getElementById('boot-splash-msg');
+      if (titleEl) {
+        titleEl.textContent = `${splashGreetingWord()}, ${splashDisplayName()}! ${splashGreetingEmoji()}`;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => titleEl.classList.add('is-visible'));
+        });
+      }
+      if (msgEl) {
+        msgEl.textContent = '💐Свежие цветы на сегодня уже готовы к заказу:';
+      }
     }
     setBootSplashPlaceholder();
 
@@ -3214,7 +3231,7 @@
           <button type="button" class="admin-modal-dismiss" data-action="broadcast-close" aria-label="Закрыть"></button>
           <div class="admin-modal-panel">
             <h3 class="section-title" style="margin:0;">Подтверждение</h3>
-            <p class="muted" style="margin-top:10px;line-height:1.45;">Отправить утреннюю рассылку в <b>${n}</b> салон(ов)? Сообщение уйдёт в Telegram привязанным контактам.</p>
+            <p class="muted" style="margin-top:10px;line-height:1.45;">Отправить рассылку в <b>${n}</b> салон(ов)? Сообщение уйдёт в Telegram привязанным контактам.</p>
             <div class="actions actions--single" style="margin-top:16px;">
               <button class="btn" type="button" data-action="broadcast-send">Да, отправить</button>
               <button class="btn-outline" type="button" data-action="broadcast-back" style="margin-top:10px;">Назад</button>
@@ -3233,11 +3250,18 @@
               ${salons.length ? salons.map((s) => {
         const sid = s.id;
         const on = m.selected && m.selected[sid];
+        const hasChat = s.tg_chat != null && String(s.tg_chat).trim() !== '';
+        const contact = (s.contact_name != null && String(s.contact_name).trim() !== '')
+          ? String(s.contact_name).trim()
+          : '';
+        const displayName = hasChat
+          ? (contact || String(s.name || '').trim() || 'Салон')
+          : (String(s.name || '').trim() || 'Салон');
         return `
                 <label class="broadcast-salon-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--border);cursor:pointer;background:${on ? 'var(--primary-soft)' : 'var(--surface-soft)'};">
                   <input type="checkbox" data-action="broadcast-toggle" data-salon-id="${sid}" ${on ? 'checked' : ''} style="width:18px;height:18px;" />
-                  <span style="font-weight:700;">${escapeHtml(s.name || 'Салон')}</span>
-                  ${s.tg_chat == null || String(s.tg_chat).trim() === '' ? '<span class="muted" style="font-size:11px;margin-left:auto;">нет tg_chat</span>' : ''}
+                  <span style="font-weight:700;">${escapeHtml(displayName)}</span>
+                  ${hasChat ? '' : '<span class="muted" style="font-size:11px;margin-left:auto;">Нет аккаунта</span>'}
                 </label>`;
       }).join('') : '<div class="muted">Салоны не найдены в базе.</div>'}
             </div>

@@ -6,6 +6,11 @@ import os
 import re
 from datetime import date as date_cls, datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None  # type: ignore[misc, assignment]
 from urllib.parse import parse_qsl
 
 import requests
@@ -1571,8 +1576,31 @@ def load_all_salons_for_broadcast() -> List[Dict[str, Any]]:
     return []
 
 
+def _moscow_hour() -> int:
+    """Час суток по Москве — как на приветственном экране мини-приложения."""
+    if ZoneInfo is not None:
+        try:
+            return datetime.now(ZoneInfo("Europe/Moscow")).hour
+        except Exception:
+            pass
+    return (datetime.now(timezone.utc).hour + 3) % 24
+
+
+def broadcast_greeting_phrase() -> Tuple[str, str]:
+    """Текст приветствия и эмодзи по времени суток (как в splash)."""
+    h = _moscow_hour()
+    if 4 <= h < 12:
+        return "Доброе утро", "☀️"
+    if 12 <= h < 18:
+        return "Добрый день", "🌤️"
+    if 18 <= h < 24:
+        return "Добрый вечер", "🌆"
+    return "Доброй ночи", "🌙"
+
+
 def build_morning_broadcast_text(salon: Dict[str, Any]) -> str:
     nm = str(salon.get("contact_name") or salon.get("name") or "коллега").strip()
+    greet, emo = broadcast_greeting_phrase()
     flowers = load_flower_types()
     lines: List[str] = []
     for f in flowers:
@@ -1585,8 +1613,8 @@ def build_morning_broadcast_text(salon: Dict[str, Any]) -> str:
         lines.append(f"— {html.escape(name)} — {stock} стеблей")
     body = "\n".join(lines) if lines else "— Актуальные позиции смотрите в мини-приложении."
     return (
-        f"Доброе утро, {html.escape(nm)} ☀️\n\n"
-        "Свежие цветы на сегодня уже готовы к заказу:\n\n"
+        f"{greet}, {html.escape(nm)}! {emo}\n\n"
+        "💐Свежие цветы на сегодня уже готовы к заказу:\n\n"
         f"{body}\n\n"
         "Заявку можно оформить в мини-приложении или по кнопке ниже.\n"
         "Хорошего дня! 🤗"
