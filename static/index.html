@@ -3251,17 +3251,20 @@
         const sid = s.id;
         const on = m.selected && m.selected[sid];
         const hasChat = s.tg_chat != null && String(s.tg_chat).trim() !== '';
+        const salonTitle = String(s.name || '').trim() || 'Салон';
         const contact = (s.contact_name != null && String(s.contact_name).trim() !== '')
           ? String(s.contact_name).trim()
           : '';
-        const displayName = hasChat
-          ? (contact || String(s.name || '').trim() || 'Салон')
-          : (String(s.name || '').trim() || 'Салон');
+        const trail = hasChat
+          ? (contact
+            ? `<span class="muted" style="font-size:11px;margin-left:auto;">${escapeHtml(contact)}</span>`
+            : '')
+          : '<span class="muted" style="font-size:11px;margin-left:auto;">Нет аккаунта</span>';
         return `
                 <label class="broadcast-salon-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--border);cursor:pointer;background:${on ? 'var(--primary-soft)' : 'var(--surface-soft)'};">
                   <input type="checkbox" data-action="broadcast-toggle" data-salon-id="${sid}" ${on ? 'checked' : ''} style="width:18px;height:18px;" />
-                  <span style="font-weight:700;">${escapeHtml(displayName)}</span>
-                  ${hasChat ? '' : '<span class="muted" style="font-size:11px;margin-left:auto;">Нет аккаунта</span>'}
+                  <span style="font-weight:700;">${escapeHtml(salonTitle)}</span>
+                  ${trail}
                 </label>`;
       }).join('') : '<div class="muted">Салоны не найдены в базе.</div>'}
             </div>
