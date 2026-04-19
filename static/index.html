@@ -2600,20 +2600,12 @@
     }
 
     function updateBootSplashGreeting() {
-      try {
-        if (window._bootPhraseTimer) window.clearInterval(window._bootPhraseTimer);
-        window._bootPhraseTimer = null;
-      } catch (_) {}
       const titleEl = document.querySelector('.boot-splash__title');
-      const msgEl = document.getElementById('boot-splash-msg');
       if (titleEl) {
         titleEl.textContent = `${splashGreetingWord()}, ${splashDisplayName()}! ${splashGreetingEmoji()}`;
         requestAnimationFrame(() => {
           requestAnimationFrame(() => titleEl.classList.add('is-visible'));
         });
-      }
-      if (msgEl) {
-        msgEl.textContent = '💐Свежие цветы на сегодня уже готовы к заказу:';
       }
     }
     setBootSplashPlaceholder();
