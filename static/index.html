@@ -2341,6 +2341,50 @@
       color: #5a6169;
       border-color: rgba(70, 78, 88, 0.38);
     }
+    .stock-lock-tip-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10020;
+      background: transparent;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .stock-lock-tip-popover {
+      position: fixed;
+      z-index: 10021;
+      transform: translateX(-50%);
+      max-width: min(320px, calc(100vw - 24px));
+      pointer-events: none;
+    }
+    .stock-lock-tip-shell {
+      position: relative;
+      pointer-events: auto;
+      margin-top: 0;
+      filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.45));
+    }
+    .stock-lock-tip-arrow {
+      position: absolute;
+      left: 50%;
+      top: -5px;
+      z-index: 1;
+      width: 12px;
+      height: 12px;
+      margin-left: -6px;
+      background: #282c34;
+      transform: rotate(45deg);
+      border-radius: 2px 0 0 0;
+    }
+    .stock-lock-tip-body {
+      position: relative;
+      z-index: 2;
+      margin-top: 2px;
+      background: #282c34;
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 400;
+    }
     .action-overlay-error-icon {
       width: 52px;
       height: 52px;
@@ -2431,7 +2475,12 @@
       adminBlockingMessage: null,
       /** Рассылка: null | { step:'pick'|'confirm', salons:[], selected: Record<id,true> } */
       broadcastModal: null,
+      /** Подсказка у замочка: { cx, by, pid } — координаты viewport, id товара (toggle / закрытие по фону) */
+      stockLockTip: null,
     };
+
+    const STOCK_LOCK_HELP_TEXT =
+      'Число у замочка — сколько стеблей этого цветка уже зарезервировано в заявках, которые ещё не подтверждены менеджером.';
 
     let lastOverlaySyncKey = '\x00';
 
@@ -2658,9 +2707,25 @@
       const avail = Number(item.stock ?? 0);
       const res = Number(item.reserved_pending ?? 0);
       const lock = res > 0
-        ? `<button type="button" class="stock-lock-wrap stock-lock-btn" data-action="stock-lock-info" aria-label="Что означает замочек">${lockIconSvg}<span>${res}</span></button>`
+        ? `<button type="button" class="stock-lock-wrap stock-lock-btn" data-action="stock-lock-info" data-id="${item.id}" aria-label="Подсказка: зарезервировано в заявках">${lockIconSvg}<span>${res}</span></button>`
         : '';
       return `<span class="product-stock-inline">${stemPart}В наличии: <b class="stock-avail-num">${avail}</b>${lock}</span>`;
+    }
+
+    function renderStockLockTipLayer() {
+      const t = state.stockLockTip;
+      if (!t) return '';
+      const cx = Number.isFinite(Number(t.cx)) ? Number(t.cx) : 0;
+      const by = Number.isFinite(Number(t.by)) ? Number(t.by) : 0;
+      return `
+        <div class="stock-lock-tip-backdrop" data-action="stock-lock-tip-dismiss" aria-hidden="true"></div>
+        <div class="stock-lock-tip-popover" role="tooltip" id="stock-lock-tip-popover" style="left:${cx}px;top:${by}px">
+          <div class="stock-lock-tip-shell">
+            <div class="stock-lock-tip-arrow" aria-hidden="true"></div>
+            <div class="stock-lock-tip-body" id="stock-lock-tip-body">${escapeHtml(STOCK_LOCK_HELP_TEXT)}</div>
+          </div>
+        </div>
+      `;
     }
 
     const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
@@ -2778,6 +2843,7 @@
     }
 
     function setActiveTab(tab) {
+      state.stockLockTip = null;
       state.activeTab = tab;
       if (tab === 'admin' && state.isAdmin) {
         loadAdminCatalog();
@@ -4706,6 +4772,7 @@
         ${renderAdminEditorModal()}
         ${renderRejectModal()}
         ${renderBroadcastModal()}
+        ${renderStockLockTipLayer()}
       `;
 
       syncQtyInputsFromState(app);
@@ -4871,14 +4938,25 @@
       if (action === 'stock-lock-info') {
         event.preventDefault();
         event.stopPropagation();
-        const msg =
-          'Число у замочка — сколько стеблей этого цветка уже зарезервировано в заявках, которые ещё не подтверждены менеджером.';
-        try {
-          if (window.tg && typeof window.tg.showAlert === 'function') window.tg.showAlert(msg);
-          else showNotice(msg);
-        } catch (_) {
-          showNotice(msg);
+        const pid = target.dataset.id != null ? String(target.dataset.id) : '';
+        const r = target.getBoundingClientRect();
+        const pad = 14;
+        const vw = window.innerWidth || 360;
+        const cx = Math.min(vw - pad, Math.max(pad, r.left + r.width / 2));
+        const by = r.bottom + 10;
+        const cur = state.stockLockTip;
+        if (cur && String(cur.pid) === pid) {
+          state.stockLockTip = null;
+        } else {
+          state.stockLockTip = { cx, by, pid };
         }
+        render();
+        return;
+      }
+      if (action === 'stock-lock-tip-dismiss') {
+        state.stockLockTip = null;
+        render();
+        return;
       }
       if (action === 'admin-editor-save') {
         await submitAdminRevision();
