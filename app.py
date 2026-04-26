@@ -27,6 +27,13 @@ FLOWERS_PUBLIC_BASE = os.getenv(
     f"{SUPABASE_URL}/storage/v1/object/public/flowers" if SUPABASE_URL else "",
 ).rstrip("/")
 REQUESTS_TABLE = os.getenv("REQUESTS_TABLE", "client_requests")
+BUSINESS_TIMEZONE = os.getenv("BUSINESS_TIMEZONE", "Europe/Moscow")
+WEBHOOK_SECRET_TOKEN = (
+    os.getenv("BLOSSOM_WEBHOOK_SECRET")
+    or os.getenv("TELEGRAM_WEBHOOK_SECRET")
+    or os.getenv("WEBHOOK_SECRET_TOKEN")
+    or ""
+)
 
 FLOWER_TYPES_SELECT_FULL = "id,name,stems_count,catalog_visible,price_rub,color,stem_length_cm"
 FLOWER_TYPES_SELECT_BASIC = "id,name,stems_count,catalog_visible,price_rub"
@@ -254,15 +261,39 @@ def validate_webapp_init_data(init_data: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def require_admin_from_header() -> Tuple[Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
+def require_telegram_user_from_header(
+    payload: Optional[Dict[str, Any]] = None,
+) -> Tuple[Optional[str], Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
     init_data = request.headers.get("X-Telegram-Init-Data", "") or ""
     user = validate_webapp_init_data(init_data)
     if not user:
-        return None, (jsonify({"ok": False, "error": "invalid_init_data"}), 401)
+        return None, None, (jsonify({"ok": False, "error": "invalid_init_data"}), 401)
     uid = normalize_tg_user_id(user.get("id"))
+    if not uid:
+        return None, None, (jsonify({"ok": False, "error": "invalid_telegram_user"}), 401)
+    if payload is not None and "telegram_id" in payload:
+        supplied = normalize_tg_user_id(payload.get("telegram_id"))
+        if supplied and supplied != uid:
+            return None, None, (jsonify({"ok": False, "error": "telegram_id_mismatch"}), 403)
+    return uid, user, None
+
+
+def require_admin_from_header() -> Tuple[Optional[Dict[str, Any]], Optional[Tuple[Any, int]]]:
+    uid, user, err = require_telegram_user_from_header()
+    if err:
+        return None, err
     if not uid or not is_user_telegram_admin(uid):
         return None, (jsonify({"ok": False, "error": "forbidden"}), 403)
     return user, None
+
+
+def require_webhook_secret() -> Optional[Tuple[Any, int]]:
+    if not WEBHOOK_SECRET_TOKEN:
+        return jsonify({"ok": False, "error": "webhook_secret_not_configured"}), 500
+    received = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "") or ""
+    if not hmac.compare_digest(received, WEBHOOK_SECRET_TOKEN):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return None
 
 
 _MONTHS_RU = (
@@ -302,6 +333,29 @@ def parse_iso_date_only(value: Any) -> Optional[date_cls]:
         return date_cls(y, m, d)
     except ValueError:
         return None
+
+
+def business_today() -> date_cls:
+    if ZoneInfo is not None:
+        try:
+            return datetime.now(ZoneInfo(BUSINESS_TIMEZONE)).date()
+        except Exception:
+            pass
+    return date_cls.today()
+
+
+def normalize_delivery_date_not_past(
+    value: Any,
+    *,
+    allow_past_if_same: Any = None,
+) -> Tuple[Optional[str], Optional[str]]:
+    d = parse_iso_date_only(value)
+    if not d:
+        return None, "invalid_delivery_date"
+    previous = parse_iso_date_only(allow_past_if_same)
+    if d < business_today() and previous != d:
+        return None, "delivery_date_in_past"
+    return d.isoformat(), None
 
 
 def format_date_ru_long(value: Any) -> str:
@@ -770,7 +824,7 @@ def build_products_from_flowers(
 def add_cors(resp):
     resp.headers["Access-Control-Allow-Origin"] = "*"
     resp.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Telegram-Init-Data"
-    resp.headers["Access-Control-Allow-Methods"] = "GET,POST,OPTIONS"
+    resp.headers["Access-Control-Allow-Methods"] = "GET,POST,DELETE,OPTIONS"
     return resp
 
 
@@ -801,9 +855,9 @@ def api_me():
         return jsonify({"ok": False, "error": error}), 500
 
     payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
-    if telegram_id is None or telegram_id == "":
-        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
+    telegram_id, _, err = require_telegram_user_from_header(payload)
+    if err:
+        return err[0], err[1]
 
     tid_norm = normalize_tg_user_id(telegram_id)
     is_admin = is_user_telegram_admin(tid_norm)
@@ -974,9 +1028,9 @@ def api_admin_revise_request(request_id: int):
     date_changed = False
     prev_d = row.get("delivery_date")
     if delivery_new:
-        if len(delivery_new) < 10 or delivery_new[4] != "-" or delivery_new[7] != "-":
-            return jsonify({"ok": False, "error": "invalid_delivery_date"}), 400
-        dshort = delivery_new[:10]
+        dshort, date_error = normalize_delivery_date_not_past(delivery_new, allow_past_if_same=prev_d)
+        if date_error:
+            return jsonify({"ok": False, "error": date_error}), 400
         pk = str(prev_d)[:10] if prev_d else ""
         date_changed = pk != dshort
     if not merged_note and dshort and date_changed and not items_were_changed:
@@ -1088,10 +1142,10 @@ def api_feedback():
     if error:
         return jsonify({"ok": False, "error": error}), 500
     payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
+    telegram_id, tg_user, err = require_telegram_user_from_header(payload)
+    if err:
+        return err[0], err[1]
     text = (payload.get("message") or "").strip()
-    if not telegram_id:
-        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
     if len(text) < 3:
         return jsonify({"ok": False, "error": "message too short"}), 400
     try:
@@ -1102,7 +1156,12 @@ def api_feedback():
         return jsonify({"ok": False, "error": str(exc)}), 500
     if not ADMIN_CHAT_ID:
         return jsonify({"ok": False, "error": "admin not configured"}), 500
-    name = html.escape(str(payload.get("telegram_name") or "Клиент"))
+    tg_name = " ".join(
+        str(tg_user.get(k) or "").strip()
+        for k in ("first_name", "last_name")
+        if tg_user and str(tg_user.get(k) or "").strip()
+    )
+    name = html.escape(str(tg_name or payload.get("telegram_name") or "Клиент"))
     salon_name = html.escape(str(salon.get("name") or "Салон"))
     tg_send_message(
         ADMIN_CHAT_ID,
@@ -1216,9 +1275,9 @@ def api_my_requests():
         return jsonify({"ok": False, "error": error}), 500
 
     payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
-    if not telegram_id:
-        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
+    telegram_id, _, err = require_telegram_user_from_header(payload)
+    if err:
+        return err[0], err[1]
 
     try:
         rows = load_requests_for_user(telegram_id)
@@ -1234,13 +1293,20 @@ def api_order():
         return jsonify({"ok": False, "error": error}), 500
 
     payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
+    telegram_id, tg_user, err = require_telegram_user_from_header(payload)
+    if err:
+        return err[0], err[1]
     items = payload.get("items") or []
-    telegram_name = (payload.get("telegram_name") or "Клиент").strip() or "Клиент"
-    telegram_username = (payload.get("telegram_username") or "").strip().lstrip("@")
+    signed_name = " ".join(
+        str(tg_user.get(k) or "").strip()
+        for k in ("first_name", "last_name")
+        if tg_user and str(tg_user.get(k) or "").strip()
+    )
+    telegram_name = (signed_name or payload.get("telegram_name") or "Клиент").strip() or "Клиент"
+    telegram_username = str(
+        (tg_user or {}).get("username") or payload.get("telegram_username") or ""
+    ).strip().lstrip("@")
 
-    if not telegram_id:
-        return jsonify({"ok": False, "error": "telegram_id is required"}), 400
     if not items:
         return jsonify({"ok": False, "error": "items are required"}), 400
 
@@ -1274,10 +1340,9 @@ def api_order():
     delivery_raw = (payload.get("delivery_date") or "").strip()
     delivery_date: Optional[str] = None
     if delivery_raw:
-        if len(delivery_raw) >= 10 and delivery_raw[4] == "-" and delivery_raw[7] == "-":
-            delivery_date = delivery_raw[:10]
-        else:
-            return jsonify({"ok": False, "error": "invalid_delivery_date"}), 400
+        delivery_date, date_error = normalize_delivery_date_not_past(delivery_raw)
+        if date_error:
+            return jsonify({"ok": False, "error": date_error}), 400
 
     try:
         reserved_map = aggregate_pending_reservations()
@@ -1363,10 +1428,12 @@ def api_cancel_request():
         return jsonify({"ok": False, "error": error}), 500
 
     payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
+    telegram_id, _, err = require_telegram_user_from_header(payload)
+    if err:
+        return err[0], err[1]
     request_id = payload.get("request_id")
-    if not telegram_id or not request_id:
-        return jsonify({"ok": False, "error": "telegram_id and request_id are required"}), 400
+    if not request_id:
+        return jsonify({"ok": False, "error": "request_id is required"}), 400
 
     try:
         row = load_request_by_id(request_id)
@@ -1542,11 +1609,13 @@ def api_revision_response():
         return jsonify({"ok": False, "error": error}), 500
 
     payload = request.get_json(silent=True) or {}
-    telegram_id = payload.get("telegram_id")
+    telegram_id, _, err = require_telegram_user_from_header(payload)
+    if err:
+        return err[0], err[1]
     request_id = payload.get("request_id")
     decision = (payload.get("decision") or "").strip().lower()
-    if not telegram_id or not request_id:
-        return jsonify({"ok": False, "error": "telegram_id and request_id are required"}), 400
+    if not request_id:
+        return jsonify({"ok": False, "error": "request_id is required"}), 400
     if decision not in {"accept", "reject"}:
         return jsonify({"ok": False, "error": "decision must be accept or reject"}), 400
 
@@ -1677,6 +1746,10 @@ def api_admin_broadcast():
 
 @app.post("/webhook")
 def webhook():
+    secret_error = require_webhook_secret()
+    if secret_error:
+        return secret_error[0], secret_error[1]
+
     payload = request.get_json(silent=True) or {}
     callback_query = payload.get("callback_query")
     if not callback_query:

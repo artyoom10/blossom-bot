@@ -2491,6 +2491,21 @@
       return String(id);
     }
 
+    function todayIsoLocal() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function normalizeSelectableDate(iso) {
+      const raw = String(iso || '').slice(0, 10);
+      const today = todayIsoLocal();
+      if (!raw || raw < today) return today;
+      return raw;
+    }
+
     function canSalonOrder() {
       return state.linked && !!state.salon;
     }
@@ -2554,6 +2569,10 @@
     function translateApiError(msg) {
       const key = String(msg || '').trim();
       const map = {
+        invalid_init_data: 'Откройте мини-приложение через Telegram.',
+        telegram_id_mismatch: 'Сессия Telegram не совпадает с запросом. Откройте приложение заново.',
+        invalid_delivery_date: 'Укажите корректную дату поставки.',
+        delivery_date_in_past: 'Дата поставки не может быть раньше сегодняшней.',
         request_cannot_be_cancelled: 'Заявка уже обработана — обновите список.',
         request_not_deletable: 'Эту заявку нельзя удалить.',
         request_not_editable: 'Заявка уже обработана.',
@@ -2933,10 +2952,11 @@
     }
 
     async function api(path, options = {}) {
+      const { headers, ...rest } = options;
       const res = await fetch(path, {
         cache: 'no-store',
-        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-        ...options,
+        ...rest,
+        headers: initDataHeaders(headers || {}),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) {
@@ -3485,10 +3505,11 @@
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         let res = null;
         try {
+          const { headers, ...rest } = options;
           res = await fetch(path, {
             cache: 'no-store',
-            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-            ...options,
+            ...rest,
+            headers: initDataHeaders(headers || {}),
           });
           const data = await res.json().catch(() => ({}));
           if (res.ok && data.ok !== false) return data;
@@ -3511,6 +3532,17 @@
         render();
       }, 280);
       if (!state.telegramId) {
+        if (spinTimer != null) window.clearTimeout(spinTimer);
+        state.linked = false;
+        state.salon = null;
+        state.meMessage = 'Откройте мини-приложение через Telegram.';
+        state.isAdmin = false;
+        state.loadingProfile = false;
+        updateBootSplashGreeting();
+        render();
+        return;
+      }
+      if (!tg || !tg.initData) {
         if (spinTimer != null) window.clearTimeout(spinTimer);
         state.linked = false;
         state.salon = null;
@@ -3656,6 +3688,12 @@
         render();
         return;
       }
+      if (dd < todayIsoLocal()) {
+        state.deliveryDate = todayIsoLocal();
+        showNotice('Дата поставки не может быть раньше сегодняшней.');
+        render();
+        return;
+      }
       state.submitting = true;
       window.clearTimeout(actionOverlayTimer);
       state.actionOverlay = { phase: 'loading', variant: 'order', loadingText: 'Оформляем заявку…' };
@@ -3767,9 +3805,7 @@
     }
 
     function goToCheckout() {
-      if (!state.deliveryDate || state.deliveryDate.length < 10) {
-        state.deliveryDate = new Date().toISOString().slice(0, 10);
-      }
+      state.deliveryDate = normalizeSelectableDate(state.deliveryDate);
       state.activeTab = 'checkout';
       render();
     }
@@ -4024,7 +4060,8 @@
 
     function renderCheckout() {
       const items = cartItems();
-      const dd = state.deliveryDate || new Date().toISOString().slice(0, 10);
+      const minDeliveryDate = todayIsoLocal();
+      const dd = normalizeSelectableDate(state.deliveryDate || minDeliveryDate);
       const humanDate = formatCheckoutDateShort(dd);
       const dowFull = weekdayFullRu(dd);
       return `
@@ -4048,6 +4085,7 @@
                   data-checkout-delivery
                   class="checkout-date-picker-overlay"
                   value="${escapeAttr(dd)}"
+                  min="${escapeAttr(minDeliveryDate)}"
                   aria-label="Изменить дату поставки"
                 />
               </div>
@@ -4513,7 +4551,7 @@
               </div>
             `).join('')}
             <label class="detail-label" style="display:block;margin-top:16px;">Дата поставки</label>
-            <input type="date" data-admin-revise-delivery value="${escapeAttr(ed.deliveryDate || '')}" style="width:100%;margin-top:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
+            <input type="date" data-admin-revise-delivery value="${escapeAttr(ed.deliveryDate || '')}" min="${escapeAttr(todayIsoLocal())}" style="width:100%;margin-top:6px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);font:inherit;font-weight:600;box-sizing:border-box;" />
             <label class="detail-label" style="display:block;margin-top:16px;">Комментарий клиенту</label>
             <textarea data-admin-revise-comment placeholder="Комментарий для клиента (по желанию)" style="width:100%;min-height:80px;margin-top:6px;border-radius:14px;border:1px solid var(--border);padding:12px;font:inherit;resize:vertical;box-sizing:border-box;">${escapeHtml(ed.comment || '')}</textarea>
             <div class="actions actions--single" style="margin-top:16px;">
@@ -4800,7 +4838,12 @@
     document.addEventListener('change', (event) => {
       const t = event.target;
       if (t && t.matches && t.matches('[data-checkout-delivery]')) {
-        state.deliveryDate = (t.value || '').slice(0, 10);
+        const raw = (t.value || '').slice(0, 10);
+        state.deliveryDate = normalizeSelectableDate(raw);
+        if (raw && raw !== state.deliveryDate) {
+          t.value = state.deliveryDate;
+          showNotice('Дата поставки не может быть раньше сегодняшней.');
+        }
         render();
         return;
       }
@@ -4816,6 +4859,11 @@
         if (f) f.catalog_visible = t.checked;
       }
       if (t && t.matches && t.matches('[data-admin-revise-delivery]')) {
+        const raw = (t.value || '').slice(0, 10);
+        if (raw && raw < todayIsoLocal()) {
+          t.value = todayIsoLocal();
+          showNotice('Дата поставки не может быть раньше сегодняшней.');
+        }
         refreshAdminEditorSubmitState();
       }
     });
