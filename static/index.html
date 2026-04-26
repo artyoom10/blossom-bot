@@ -429,6 +429,7 @@
       margin: 0 0 6px;
       box-shadow: 0 16px 48px rgba(15, 23, 42, 0.14);
       border: 1px solid rgba(0, 0, 0, 0.06);
+      background: #f7f9fa;
     }
     .product-hero-frame::after {
       content: '';
@@ -440,18 +441,58 @@
     }
     .product-hero {
       width: 100%;
-      max-height: min(200px, 42vh);
-      height: auto;
+      height: clamp(170px, 38vh, 220px);
       aspect-ratio: 4 / 3;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 0;
       border: 0;
-      background: #f1f3f5;
+      background: #f7f9fa;
       display: block;
     }
     .product-hero.out {
       filter: grayscale(1);
       opacity: .8;
+    }
+    .product-gallery-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--text);
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+      cursor: pointer;
+    }
+    .product-gallery-btn--prev { left: 10px; }
+    .product-gallery-btn--next { right: 10px; }
+    .product-gallery-dots {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .product-gallery-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(22, 24, 29, 0.28);
+    }
+    .product-gallery-dot.active {
+      width: 18px;
+      border-radius: 999px;
+      background: var(--primary);
     }
     .panel {
       padding: 16px;
@@ -1737,18 +1778,57 @@
     }
     .admin-flower-row {
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 12px;
       align-items: start;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
+      padding: 12px;
+      margin-top: 12px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: 0 6px 18px rgba(18, 24, 32, .045);
     }
-    .admin-flower-row:last-child { border-bottom: 0; }
+    .admin-flower-thumb {
+      width: 76px;
+      height: 76px;
+      object-fit: cover;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: #f1f3f5;
+    }
+    .admin-flower-body {
+      min-width: 0;
+    }
+    .admin-flower-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .admin-flower-title {
+      min-width: 0;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: var(--text);
+    }
+    .admin-field {
+      min-width: 0;
+    }
+    .admin-field label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
     .admin-input-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
-      margin-top: 8px;
+      margin-top: 12px;
     }
     .admin-input-row input {
       width: 100%;
@@ -2430,6 +2510,7 @@
       activeTab: 'home',
       activeCategory: 'all',
       selectedProductId: null,
+      productGalleryIndex: {},
       cart: {},
       submitting: false,
       products: [],
@@ -3051,6 +3132,32 @@
     function productThumbUrl(productId) {
       const p = state.products.find((x) => String(x.id) === String(productId));
       return (p && p.image) ? p.image : '/miniapp/blossom_logo.png';
+    }
+
+    function productGalleryImages(item) {
+      const img = item && item.image ? String(item.image) : '/miniapp/blossom_logo.png';
+      const gallery = Array.isArray(item && item.gallery)
+        ? item.gallery.map((x) => String(x || '').trim()).filter(Boolean)
+        : [];
+      return gallery.length ? gallery : [img, img, img];
+    }
+
+    function productGalleryIndex(item, gallery) {
+      const key = String(item && item.id != null ? item.id : '');
+      const len = gallery.length || 1;
+      const raw = Number(state.productGalleryIndex[key] || 0);
+      if (!Number.isFinite(raw)) return 0;
+      return ((Math.trunc(raw) % len) + len) % len;
+    }
+
+    function setProductGalleryIndex(productId, index) {
+      const item = state.products.find((p) => String(p.id) === String(productId));
+      if (!item) return;
+      const gallery = productGalleryImages(item);
+      const len = gallery.length || 1;
+      const next = ((Math.trunc(Number(index) || 0) % len) + len) % len;
+      state.productGalleryIndex[String(productId)] = next;
+      render();
     }
 
     function salonImageFromSalonObject(salon) {
@@ -4104,6 +4211,9 @@
       }
       const k = String(item.id);
       const inCartUi = productInCart(item.id);
+      const gallery = productGalleryImages(item);
+      const galleryIndex = productGalleryIndex(item, gallery);
+      const gallerySrc = gallery[galleryIndex] || item.image;
       let displayQty = state.cart[item.id] || 0;
       if (state.qtyDraft[k] !== undefined) {
         const p = parseInt(String(state.qtyDraft[k]).replace(/\D/g, ''), 10);
@@ -4112,7 +4222,14 @@
       return `
         <section class="stack">
           <div class="product-hero-frame">
-            <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(item.image)}" alt="${escapeAttr(item.name)}" />
+            <img class="product-hero ${item.available ? '' : 'out'}" src="${escapeAttr(gallerySrc)}" alt="${escapeAttr(item.name)}" />
+            ${gallery.length > 1 ? `
+              <button class="product-gallery-btn product-gallery-btn--prev" type="button" data-action="gallery-prev" data-id="${item.id}" aria-label="Предыдущее фото">‹</button>
+              <button class="product-gallery-btn product-gallery-btn--next" type="button" data-action="gallery-next" data-id="${item.id}" aria-label="Следующее фото">›</button>
+              <div class="product-gallery-dots" aria-hidden="true">
+                ${gallery.map((_, idx) => `<span class="product-gallery-dot ${idx === galleryIndex ? 'active' : ''}"></span>`).join('')}
+              </div>
+            ` : ''}
           </div>
           <div class="panel">
             <div class="product-detail-head">
@@ -4800,17 +4917,26 @@
               <p class="muted" style="margin-top:8px;">Цена, отображаемый остаток и показ позиции клиентам.</p>
               ${state.adminFlowers.map((f) => `
                 <div class="admin-flower-row">
-                  <div style="min-width:0;">
-                    <div class="product-name">${escapeHtml(f.name)}</div>
+                  <img class="admin-flower-thumb" src="${escapeAttr(f.image || productThumbUrl(f.id))}" alt="" loading="lazy" decoding="async" />
+                  <div class="admin-flower-body">
+                    <div class="admin-flower-head">
+                      <div class="admin-flower-title">${escapeHtml(f.name)}</div>
+                      <label class="toggle-row" style="flex-direction:column;align-items:flex-end;min-width:88px;">
+                        <span class="muted" style="font-size:10px;font-weight:700;">В каталоге</span>
+                        <input type="checkbox" data-admin-flower-vis data-id="${f.id}" ${f.catalog_visible !== false ? 'checked' : ''} />
+                      </label>
+                    </div>
                     <div class="admin-input-row">
-                      <input type="text" inputmode="decimal" data-admin-flower-price data-id="${f.id}" value="${f.price_rub != null && f.price_rub !== '' ? escapeHtml(String(f.price_rub)) : ''}" placeholder="Цена ₽" />
-                      <input type="text" inputmode="numeric" data-admin-flower-stock data-id="${f.id}" value="${f.stems_count != null && f.stems_count !== '' ? escapeHtml(String(f.stems_count)) : ''}" placeholder="Остаток (шт.)" />
+                      <div class="admin-field">
+                        <label for="admin-flower-price-${f.id}">Цена за стебель</label>
+                        <input id="admin-flower-price-${f.id}" type="text" inputmode="decimal" data-admin-flower-price data-id="${f.id}" value="${f.price_rub != null && f.price_rub !== '' ? escapeHtml(String(f.price_rub)) : ''}" placeholder="₽" />
+                      </div>
+                      <div class="admin-field">
+                        <label for="admin-flower-stock-${f.id}">Остаток, шт.</label>
+                        <input id="admin-flower-stock-${f.id}" type="text" inputmode="numeric" data-admin-flower-stock data-id="${f.id}" value="${f.stems_count != null && f.stems_count !== '' ? escapeHtml(String(f.stems_count)) : ''}" placeholder="шт." />
+                      </div>
                     </div>
                   </div>
-                  <label class="toggle-row" style="flex-direction:column;align-items:flex-end;min-width:88px;">
-                    <span class="muted" style="font-size:10px;font-weight:700;">В каталоге</span>
-                    <input type="checkbox" data-admin-flower-vis data-id="${f.id}" ${f.catalog_visible !== false ? 'checked' : ''} />
-                  </label>
                 </div>
               `).join('')}
               <button class="btn" type="button" data-action="admin-save-catalog" style="width:100%;margin-top:18px;">Сохранить в базе</button>
@@ -5063,6 +5189,14 @@
       }
       if (action === 'open-product') {
         openProduct(Number(id));
+      }
+      if (action === 'gallery-prev') {
+        const item = selectedProduct();
+        if (item) setProductGalleryIndex(item.id, productGalleryIndex(item, productGalleryImages(item)) - 1);
+      }
+      if (action === 'gallery-next') {
+        const item = selectedProduct();
+        if (item) setProductGalleryIndex(item.id, productGalleryIndex(item, productGalleryImages(item)) + 1);
       }
       if (action === 'add') {
         const product = state.products.find((item) => String(item.id) === String(id));
