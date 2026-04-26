@@ -1064,10 +1064,12 @@
     .boot-splash__title {
       margin: 10px 0 0;
       font-size: 26px;
+      line-height: 1.22;
       font-weight: 800;
       color: var(--text);
-      letter-spacing: -0.02em;
-      min-height: 1.35em;
+      letter-spacing: 0;
+      min-height: 2.44em;
+      overflow-wrap: anywhere;
     }
     .boot-splash__title--fade {
       opacity: 0;
@@ -1081,7 +1083,7 @@
       font-size: 15px;
       line-height: 1.45;
       color: var(--muted);
-      min-height: 2.8em;
+      min-height: 4.35em;
     }
     .boot-ellipsis-dots {
       display: inline;
@@ -2477,6 +2479,7 @@
       broadcastModal: null,
       /** Подсказка у замочка: { cx, by, pid } — координаты viewport, id товара (toggle / закрытие по фону) */
       stockLockTip: null,
+      cachedDisplayName: '',
     };
 
     const STOCK_LOCK_HELP_TEXT =
@@ -2489,6 +2492,35 @@
       const id = state.telegramId;
       if (id === null || id === undefined || id === '') return null;
       return String(id);
+    }
+
+    function storageScope() {
+      return tgIdForApi() || 'guest';
+    }
+
+    function storageKey(name) {
+      return `blossom:${name}:${storageScope()}`;
+    }
+
+    function storageGetJson(key) {
+      try {
+        const raw = window.localStorage && window.localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function storageSetJson(key, value) {
+      try {
+        if (window.localStorage) window.localStorage.setItem(key, JSON.stringify(value));
+      } catch (_) {}
+    }
+
+    function storageRemove(key) {
+      try {
+        if (window.localStorage) window.localStorage.removeItem(key);
+      } catch (_) {}
     }
 
     function todayIsoLocal() {
@@ -2504,6 +2536,118 @@
       const today = todayIsoLocal();
       if (!raw || raw < today) return today;
       return raw;
+    }
+
+    function loadCachedDisplayName() {
+      const cached = storageGetJson(storageKey('displayName'));
+      const name = cached && typeof cached.name === 'string' ? cached.name.trim() : '';
+      state.cachedDisplayName = name;
+    }
+
+    function cacheDisplayName(name) {
+      const clean = String(name || '').trim();
+      state.cachedDisplayName = clean;
+      if (clean) {
+        storageSetJson(storageKey('displayName'), { name: clean, savedAt: Date.now() });
+      } else {
+        storageRemove(storageKey('displayName'));
+      }
+    }
+
+    function profileDisplayName(salon) {
+      const cn = salon && salon.contact_name != null ? String(salon.contact_name).trim() : '';
+      if (cn) return cn;
+      if (salon && salon.name) return String(salon.name).trim();
+      return '';
+    }
+
+    function normalizeCartPayload(data) {
+      const rows = data && typeof data === 'object' ? data.cart : null;
+      const cart = {};
+      if (rows && typeof rows === 'object') {
+        for (const [id, qty] of Object.entries(rows)) {
+          const q = parseInt(String(qty).replace(/\D/g, ''), 10);
+          if (id !== '' && Number.isFinite(q) && q > 0) cart[id] = q;
+        }
+      }
+      return {
+        cart,
+        deliveryDate: data && data.deliveryDate ? normalizeSelectableDate(data.deliveryDate) : '',
+      };
+    }
+
+    function loadPersistedCart() {
+      const saved = normalizeCartPayload(storageGetJson(storageKey('cart')));
+      state.cart = saved.cart;
+      if (saved.deliveryDate) state.deliveryDate = saved.deliveryDate;
+    }
+
+    function flushQtyDraftsToCart() {
+      const drafts = state.qtyDraft || {};
+      for (const [productId, raw] of Object.entries(drafts)) {
+        const product = state.products.find((p) => String(p.id) === String(productId));
+        const digits = String(raw || '').replace(/\D/g, '');
+        const v = parseInt(digits, 10);
+        if (!Number.isFinite(v) || v < 1) {
+          delete state.cart[productId];
+          continue;
+        }
+        let next = v;
+        const maxStock = product && Number.isFinite(Number(product.stock)) ? Number(product.stock) : null;
+        if (maxStock != null && next > maxStock) next = maxStock;
+        if (next > 0) state.cart[productId] = next;
+        else delete state.cart[productId];
+      }
+      state.qtyDraft = {};
+    }
+
+    function persistCart() {
+      flushQtyDraftsToCart();
+      const cart = {};
+      for (const [id, qty] of Object.entries(state.cart || {})) {
+        const q = parseInt(String(qty).replace(/\D/g, ''), 10);
+        if (id !== '' && Number.isFinite(q) && q > 0) cart[id] = q;
+      }
+      if (!Object.keys(cart).length && !state.deliveryDate) {
+        storageRemove(storageKey('cart'));
+        return;
+      }
+      storageSetJson(storageKey('cart'), {
+        cart,
+        deliveryDate: state.deliveryDate || '',
+        savedAt: Date.now(),
+      });
+    }
+
+    function clearPersistedCart() {
+      storageRemove(storageKey('cart'));
+    }
+
+    function reconcileCartWithProducts() {
+      if (!state.products || !state.products.length) return false;
+      let changed = false;
+      const next = {};
+      for (const [id, qty] of Object.entries(state.cart || {})) {
+        const product = state.products.find((p) => String(p.id) === String(id));
+        if (!product || !product.available) {
+          changed = true;
+          continue;
+        }
+        const stock = Number.isFinite(Number(product.stock)) ? Math.max(0, Number(product.stock)) : null;
+        let q = parseInt(String(qty).replace(/\D/g, ''), 10);
+        if (!Number.isFinite(q) || q <= 0) {
+          changed = true;
+          continue;
+        }
+        if (stock != null && q > stock) {
+          q = stock;
+          changed = true;
+        }
+        if (q > 0) next[String(id)] = q;
+      }
+      state.cart = next;
+      if (changed) persistCart();
+      return changed;
     }
 
     function canSalonOrder() {
@@ -2682,18 +2826,11 @@
 
     function splashDisplayName() {
       const salon = state.salon;
-      const cn = salon && salon.contact_name != null ? String(salon.contact_name).trim() : '';
-      if (cn) return cn;
-      if (salon && salon.name) return String(salon.name).trim();
+      const profileName = profileDisplayName(salon);
+      if (profileName) return profileName;
+      if (state.cachedDisplayName) return state.cachedDisplayName;
       if (state.telegramName && state.telegramName !== 'Гость') return String(state.telegramName).trim();
       return 'коллега';
-    }
-
-    function setBootSplashPlaceholder() {
-      const titleEl = document.querySelector('.boot-splash__title');
-      if (!titleEl) return;
-      titleEl.textContent = '';
-      titleEl.classList.remove('is-visible');
     }
 
     function updateBootSplashGreeting() {
@@ -2705,7 +2842,9 @@
         });
       }
     }
-    setBootSplashPlaceholder();
+    loadCachedDisplayName();
+    loadPersistedCart();
+    updateBootSplashGreeting();
 
     function renderPageRefreshOverlay(text) {
       return `
@@ -3563,6 +3702,7 @@
         state.meMessage = data.message || '';
         state.isAdmin = !!data.is_admin;
         state.stats = data.stats || { approved_rub: 0, approved_stems: 0 };
+        cacheDisplayName(data.linked && data.salon ? profileDisplayName(data.salon) : '');
       } catch (err) {
         state.linked = false;
         state.salon = null;
@@ -3587,6 +3727,7 @@
         const data = await apiWakeAware('/api/products');
         state.products = data.products || [];
         state.categories = data.categories || [{ id: 'all', name: 'Все', count: state.products.length }];
+        reconcileCartWithProducts();
         state.apiError = '';
       } catch (err) {
         state.apiError = err.message || 'Не удалось загрузить каталог';
@@ -3627,6 +3768,7 @@
       if (!product.available) return;
       delete state.qtyDraft[String(product.id)];
       state.cart[product.id] = 5;
+      persistCart();
       haptic('light');
       showNotice(`${product.name} · 5 стеблей в корзине`);
     }
@@ -3651,6 +3793,7 @@
         }
         state.cart[productId] = next;
       }
+      persistCart();
       render();
     }
 
@@ -3670,6 +3813,7 @@
         }
         state.cart[productId] = next;
       }
+      persistCart();
       render();
     }
 
@@ -3690,6 +3834,7 @@
       }
       if (dd < todayIsoLocal()) {
         state.deliveryDate = todayIsoLocal();
+        persistCart();
         showNotice('Дата поставки не может быть раньше сегодняшней.');
         render();
         return;
@@ -3720,6 +3865,7 @@
         state.cart = {};
         state.qtyDraft = {};
         state.deliveryDate = '';
+        clearPersistedCart();
         state.activeTab = 'orders';
         await loadRequests(true);
         await loadProducts(true);
@@ -3806,6 +3952,7 @@
 
     function goToCheckout() {
       state.deliveryDate = normalizeSelectableDate(state.deliveryDate);
+      persistCart();
       state.activeTab = 'checkout';
       render();
     }
@@ -4844,6 +4991,7 @@
           t.value = state.deliveryDate;
           showNotice('Дата поставки не может быть раньше сегодняшней.');
         }
+        persistCart();
         render();
         return;
       }
@@ -5120,8 +5268,15 @@
       }
     }, 48000);
 
+    window.addEventListener('pagehide', () => {
+      persistCart();
+    });
+
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
+      if (document.visibilityState !== 'visible') {
+        persistCart();
+        return;
+      }
       loadProducts(true);
       if (state.isAdmin) {
         loadAdminRequests(true);
