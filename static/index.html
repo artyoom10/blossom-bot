@@ -233,7 +233,7 @@
     }
 
     .product-card {
-      padding: 14px;
+      padding: 12px;
       transition: transform .15s ease, box-shadow .2s ease;
       box-shadow: 0 8px 28px rgba(18, 24, 32, .055);
     }
@@ -246,42 +246,35 @@
       box-shadow: none;
     }
     .product-row {
-      display: grid;
-      grid-template-columns: 118px minmax(0, 1fr);
-      gap: 14px;
-      align-items: start;
+      display: flex;
+      gap: 12px;
     }
     .thumb {
-      width: 118px;
-      height: 118px;
+      width: 96px;
+      height: 96px;
       object-fit: cover;
-      border-radius: 24px;
+      border-radius: 22px;
       border: 1px solid var(--border);
       background: #f1f3f5;
+      flex: 0 0 auto;
       cursor: pointer;
     }
     .out .thumb {
       filter: grayscale(1);
       opacity: .72;
     }
-    .product-main {
-      min-width: 0;
-      display: flex;
-      min-height: 118px;
-      flex-direction: column;
-    }
+    .product-main { min-width: 0; flex: 1; }
     .product-top {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 12px;
+      gap: 10px;
     }
     .product-name {
       margin: 0;
-      font-size: 17px;
-      font-weight: 800;
-      line-height: 1.22;
-      letter-spacing: 0;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
     }
     .muted { color: var(--muted); font-size: 13px; }
     .pill {
@@ -314,17 +307,15 @@
     }
     .product-price {
       margin-top: 12px;
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--text);
+      font-size: 14px;
+      font-weight: 700;
     }
     .product-meta-row {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
       gap: 10px;
-      margin-top: auto;
-      padding-top: 14px;
+      margin-top: 10px;
       width: 100%;
       min-width: 0;
     }
@@ -347,7 +338,7 @@
       flex-direction: column;
       align-items: flex-end;
       justify-content: flex-start;
-      gap: 8px;
+      gap: 2px;
       flex-shrink: 0;
       min-width: 0;
       text-align: right;
@@ -1492,10 +1483,6 @@
       width: 100%;
       min-width: 0;
     }
-    .product-card-qty-bottom--stepper {
-      width: calc(100% - 64px);
-      margin-left: 64px;
-    }
     .product-card-qty-bottom > .btn {
       width: 100%;
     }
@@ -1513,7 +1500,7 @@
     }
     .product-line-total {
       font-weight: 800;
-      font-size: 17px;
+      font-size: 15px;
       letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -1810,51 +1797,15 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       align-items: center;
+      margin-bottom: 10px;
     }
     .admin-revise-line input {
-      padding: 12px 12px;
-      border-radius: 14px;
+      padding: 10px;
+      border-radius: 12px;
       border: 1px solid var(--border);
       font-size: 14px;
       width: 100%;
       box-sizing: border-box;
-      background: #fff;
-      font-weight: 700;
-    }
-    .admin-revise-card {
-      display: grid;
-      grid-template-columns: 78px minmax(0, 1fr);
-      gap: 12px;
-      align-items: start;
-      margin-top: 14px;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 22px;
-      background: var(--surface);
-      box-shadow: 0 8px 22px rgba(18, 24, 32, .055);
-    }
-    .admin-revise-thumb {
-      width: 78px;
-      height: 78px;
-      border-radius: 18px;
-      object-fit: cover;
-      border: 1px solid var(--border);
-      background: #f1f3f5;
-    }
-    .admin-revise-body {
-      min-width: 0;
-    }
-    .admin-revise-title {
-      font-size: 15px;
-      font-weight: 800;
-      line-height: 1.25;
-      color: var(--text);
-    }
-    .admin-revise-meta {
-      margin-top: 4px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
     }
     .revision-banner {
       background: #fff4e5;
@@ -2347,7 +2298,6 @@
     .product-stock-inline {
       display: inline;
       line-height: 1.35;
-      font-weight: 600;
     }
     .stock-avail-num {
       font-size: 15px;
@@ -3989,7 +3939,7 @@
       return `
         <article class="product-card ${item.available ? '' : 'out'}">
           ${inCart ? `<div class="product-card-head"><div class="product-row">${mainBlock}</div></div>` : `<div class="product-row">${mainBlock}</div>`}
-          <div class="product-card-qty-bottom ${inCart ? 'product-card-qty-bottom--stepper' : ''}">
+          <div class="product-card-qty-bottom">
             ${inCart
               ? renderQtyStepper(item, 'card')
               : item.available && canSalonOrder()
@@ -4592,15 +4542,11 @@
             <h3 class="section-title" style="margin:0;">Заявка #${ed.id}</h3>
             <p class="muted" style="margin-top:8px;line-height:1.45;">Измените количество и цену. Комментарий увидит клиент в приложении и в Telegram.</p>
             ${ed.items.map((line, idx) => `
-              <div class="admin-revise-card">
-                <img class="admin-revise-thumb" src="${escapeAttr(productThumbUrl(line.id))}" alt="" loading="lazy" decoding="async" />
-                <div class="admin-revise-body">
-                  <div class="admin-revise-title">${escapeHtml(line.name)}</div>
-                  <div class="admin-revise-meta">${money(Number(line.price || 0))} / стебель</div>
-                  <div class="admin-revise-line" style="margin-top:10px;">
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Шт." data-admin-revise-qty data-idx="${idx}" value="${line.qty}" aria-label="Количество" />
-                    <input type="text" inputmode="decimal" placeholder="Цена ₽" data-admin-revise-price data-idx="${idx}" value="${escapeHtml(String(line.price))}" aria-label="Цена" />
-                  </div>
+              <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+                <div style="font-weight:700;font-size:14px;">${escapeHtml(line.name)}</div>
+                <div class="admin-revise-line" style="margin-top:10px;">
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Шт." data-admin-revise-qty data-idx="${idx}" value="${line.qty}" />
+                  <input type="text" inputmode="decimal" placeholder="Цена ₽" data-admin-revise-price data-idx="${idx}" value="${escapeHtml(String(line.price))}" />
                 </div>
               </div>
             `).join('')}
